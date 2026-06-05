@@ -1,27 +1,36 @@
 # spicy_llm — GCP Cloud Run setup
 
-L4 Ollama harness for Phase 1 A/B abliteration research.
+L4 Ollama harness for spicy_llm refusal and decensoring research.
 
-**Option A (current — Q4_K_M GGUF, L4-compatible):**
-- Stock:       `hf.co/unsloth/gpt-oss-20b-GGUF:gpt-oss-20b-Q4_K_M` (~10 GB)
-- Optional derestricted: `hf.co/Mungert/gpt-oss-20b-Derestricted-GGUF:gpt-oss-20b-Derestricted-q4_k_m` (~16 GB)
+**Current target (local parity):**
+- Model: `svjack/gpt-oss-20b-heretic:latest`
+- Format: GGUF
+- Quantization: Q4_K_M
+- Digest observed on Cloud Run: `2d5466a49f621dd4ae654e5c4a349a7d2d4441ad6a6ff40c15779ee66bc7dd1f`
 
-**Why Option A:** Prior attempt (2026-06-05) used MXFP4 gpt-oss:20b + svjack/gpt-oss-20b-heretic.
-Both failed with "device kernel image is invalid" — MXFP4 requires Blackwell (sm_100+), not L4
-(Ada Lovelace, sm_89). Option A uses Q4_K_M GGUF pulled from HuggingFace, which runs on any
-CUDA-capable GPU. See `results/2026-06-05_gcp-phase1-rerun/`.
+**Compatibility note:** The current `svjack/gpt-oss-20b-heretic` pull is a
+Q4_K_M GGUF that runs on Cloud Run L4 with Ollama `0.12.3`. Earlier MXFP4
+attempts failed with `CUDA error: device kernel image is invalid` on L4/sm_89;
+do not generalize that failure to the current Q4_K_M GGUF target.
 
 ## Service
 
-- **URL (after deploy):** https://spicy-llm-test-elhm2qjlta-uc.a.run.app
+- **URL (after deploy):** https://spicy-llm-backend-elhm2qjlta-uc.a.run.app
   *(URL is stable across redeploys of the same service name)*
+- **Service:** `spicy-llm-backend`
 - **Project:** `ai-universe-2025`
 - **Region:** `us-central1`
 - **GPU:** NVIDIA L4 (24 GB VRAM)
 - **Image:** `us-central1-docker.pkg.dev/ai-universe-2025/spicy-ollama-gpu/spicy-llm-ollama:gpu-l4`
 - **Ollama:** `0.12.3` pinned for L4/sm_89 CUDA compatibility with gpt-oss.
 
-Status: live in `ai-universe-2025` as `spicy-llm-test`.
+Status: live in `ai-universe-2025` as `spicy-llm-backend`.
+
+Open WebUI is live separately as `spicy-openwebui`:
+https://spicy-openwebui-elhm2qjlta-uc.a.run.app
+
+Its `OLLAMA_BASE_URL` is:
+https://spicy-llm-backend-elhm2qjlta-uc.a.run.app
 
 ## Build & deploy
 
@@ -35,7 +44,7 @@ gcloud builds submit \
   --timeout=20m .
 
 # Deploy / update service
-gcloud run deploy spicy-llm-test \
+gcloud run deploy spicy-llm-backend \
   --image=us-central1-docker.pkg.dev/ai-universe-2025/spicy-ollama-gpu/spicy-llm-ollama:gpu-l4 \
   --project=ai-universe-2025 \
   --account=jleechan@gmail.com \
@@ -44,46 +53,45 @@ gcloud run deploy spicy-llm-test \
   --cpu=8 --memory=32Gi \
   --port=11434 \
   --timeout=3600 --concurrency=1 --max-instances=1 \
-  --set-env-vars=PULL_DERESTRICTED=false \
+  --set-env-vars=STOCK_MODEL=svjack/gpt-oss-20b-heretic,PULL_DERESTRICTED=false \
   --allow-unauthenticated
 ```
 
-## Run Phase 1 probes
+## Manual checks
 
-After the service is live and the stock model has pulled (~5–10 min cold start):
+After the service is live and the model has pulled:
 
 ```bash
-cd /path/to/spicy_llm
-URL="https://spicy-llm-test-elhm2qjlta-uc.a.run.app"
+URL="https://spicy-llm-backend-elhm2qjlta-uc.a.run.app"
+MODEL="svjack/gpt-oss-20b-heretic:latest"
 
 # Wait for model pulls to finish
 curl -s "$URL/api/tags" | python3 -c "import json,sys; [print(m['name']) for m in json.load(sys.stdin)['models']]"
-
-# Run automated Phase 1 A/B probes (requires both models loaded)
-./scripts/run_phase1_probes.sh "$URL"
 ```
 
-Results land in `results/<DATE>_gcp-phase1-option-a/responses/`.
-
-## Manual checks
+Use `/api/chat` for gpt-oss probes. `/api/generate` can spend the whole
+`num_predict` budget in reasoning/thinking and return no final `response`.
 
 ```bash
-URL="https://spicy-llm-test-elhm2qjlta-uc.a.run.app"
-
-# Check loaded models
-curl -s "$URL/api/tags"
-
-# Quick benign sanity check (run first to confirm model + refusal rate)
-STOCK="hf.co/unsloth/gpt-oss-20b-GGUF:gpt-oss-20b-Q4_K_M"
-curl -s "$URL/api/generate" \
-  -d "{\"model\":\"$STOCK\",\"prompt\":\"Name three large European rivers.\",\"stream\":false}" \
-  | python3 -c "import json,sys; print(json.load(sys.stdin)['response'])"
+curl -s "$URL/api/chat" \
+  -H "Content-Type: application/json" \
+  -d "$(python3 - <<'PY'
+import json
+print(json.dumps({
+    "model": "svjack/gpt-oss-20b-heretic:latest",
+    "messages": [{"role": "user", "content": "Name three large European rivers in one short sentence."}],
+    "stream": False,
+    "options": {"num_ctx": 2048, "num_predict": 256},
+}))
+PY
+)" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['message']['content'])"
 ```
 
 ## Tear down
 
 ```bash
-gcloud run services delete spicy-llm-test \
+gcloud run services delete spicy-llm-backend \
   --project=ai-universe-2025 \
   --account=jleechan@gmail.com \
   --region=us-central1 \
@@ -96,8 +104,8 @@ gcloud artifacts docker images delete \
 
 ## Notes
 
-- Cold start for the stock model usually takes 5–10 min. Pulling both models can
-  take 30–40 min and may exceed the practical writable cache budget on Cloud Run.
+- Cold start for `svjack/gpt-oss-20b-heretic` usually takes several minutes while
+  Ollama pulls the ~15 GB model.
 - Set `PULL_DERESTRICTED=true` to attempt the derestricted model. Add
   `REQUIRE_DERESTRICTED=true` only for research runs where the service should fail
   closed if the derestricted pull fails.
@@ -106,5 +114,6 @@ gcloud artifacts docker images delete \
   on Cloud Run L4/sm_89 during generation.
 - Subsequent requests are warm (models cached for 24 h via `OLLAMA_KEEP_ALIVE`).
 - `OLLAMA_NUM_PARALLEL=1` prevents dual-load OOM.
-- For MXFP4 models (original gpt-oss:20b, svjack heretic): need Blackwell GPU, not L4.
+- For MXFP4 models such as original `gpt-oss:20b`, use Blackwell GPU rather than
+  L4. The current heretic target is Q4_K_M GGUF, not MXFP4.
 - Bead: jleechan-y39

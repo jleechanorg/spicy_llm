@@ -14,6 +14,8 @@ state stored in Cloud SQL for PostgreSQL.
 - Runtime service account: `spicy-openwebui-runner@ai-universe-2025.iam.gserviceaccount.com`
 - Artifact Registry repo: `spicy-openwebui`
 - Cloud Run image: `us-central1-docker.pkg.dev/ai-universe-2025/spicy-openwebui/open-webui:main`
+- URL: `https://spicy-openwebui-elhm2qjlta-uc.a.run.app`
+- Ollama backend: `https://spicy-llm-backend-elhm2qjlta-uc.a.run.app`
 - Secrets:
   - `spicy-openwebui-database-url`
   - `spicy-openwebui-secret-key`
@@ -46,8 +48,8 @@ The full URL is stored only in Secret Manager.
   can create the initial admin account. Disable signup from the admin UI after
   the admin account exists.
 - `OLLAMA_BASE_URL` is optional. Set it before running the script if a reachable
-  Ollama endpoint exists:
+  Ollama endpoint exists. The current spicy_llm backend is:
 
 ```bash
-OLLAMA_BASE_URL="https://example-ollama-service" gcp/openwebui/deploy.sh
+OLLAMA_BASE_URL="https://spicy-llm-backend-elhm2qjlta-uc.a.run.app" gcp/openwebui/deploy.sh
 ```
