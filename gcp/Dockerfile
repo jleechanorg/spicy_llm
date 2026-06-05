@@ -11,20 +11,19 @@ FROM nvidia/cuda:12.4.0-base-ubuntu22.04
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# cache-bust: v5 (Option A: Q4_K_M GGUF models, HF pull, no MXFP4)
-# Install runtime deps: curl (for healthcheck), ca-certs, zstd (needed to extract ollama .tar.zst)
+# cache-bust: v6 (Option A: Q4_K_M GGUF models, Ollama 0.12.3 CUDA runner)
+# Install runtime deps: curl for healthcheck/downloads, ca-certs, and gzip for the Ollama release tgz.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates gnupg zstd \
+        curl ca-certificates gnupg gzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ollama Linux — download .tar.zst directly (avoids install.sh issues with sudo/zstd)
-# Latest stable v0.30.5 supports gpt-oss:20b (>=0.6.x required)
-ARG OLLAMA_VERSION=0.30.5
-RUN curl -fsSL "https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tar.zst" \
-      -o /tmp/ollama.tar.zst \
-    && zstd -d /tmp/ollama.tar.zst -o /tmp/ollama.tar \
-    && tar -C /usr/local -xf /tmp/ollama.tar \
-    && rm /tmp/ollama.tar.zst /tmp/ollama.tar \
+# Install Ollama Linux. Version 0.12.3 is pinned because later CUDA runners
+# have reproduced "device kernel image is invalid" on L4/sm_89 with gpt-oss.
+ARG OLLAMA_VERSION=0.12.3
+RUN curl -fsSL "https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tgz" \
+      -o /tmp/ollama.tgz \
+    && tar -C /usr/local -xzf /tmp/ollama.tgz \
+    && rm /tmp/ollama.tgz \
     && ollama --version
 
 # Environment for Cloud Run:
@@ -36,6 +35,7 @@ ENV OLLAMA_HOST=0.0.0.0:11434 \
     OLLAMA_KEEP_ALIVE=24h \
     OLLAMA_MODELS=/tmp/ollama \
     OLLAMA_NUM_PARALLEL=1 \
+    OLLAMA_DEBUG=2 \
     PORT=11434
 
 # Add a non-root user to match Cloud Run's default security context
