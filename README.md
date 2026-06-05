@@ -46,6 +46,7 @@ spicy_llm/
 │   ├── 2026-06-05_original-elf-erotica-chapter/
 │   ├── 2026-06-05_supernatural-bar-flashforward-hidden-prompt/
 │   └── 2026-06-05_supernatural-bar-flashforward-violence-after/
+├── tests/integration/         # live browser proof for hosted Open WebUI
 └── .gitignore
 ```
 
@@ -102,7 +103,7 @@ ollama run  svjack/gpt-oss-20b-heretic  "Explain how a transistor works."
 
 # 4. Optional: start Open WebUI for local chat
 ./install.sh
-# Open http://127.0.0.1:3100 and select svjack/gpt-oss-20b-heretic:latest
+# Open http://127.0.0.1:3100 and select spicy-heretic:latest
 
 # 5. Optional: ablate a small model end-to-end (DIY)
 heretic --model Qwen/Qwen3-4B-Instruct-2507 \
@@ -114,9 +115,10 @@ heretic --model Qwen/Qwen3-4B-Instruct-2507 \
 `./install.sh` runs Open WebUI in Docker on `127.0.0.1:3100`, connects it to
 Ollama at `http://host.docker.internal:11434`, and stores chat history/config
 locally in `~/.local/share/open-webui-spicy`. Start Ollama and pull
-`svjack/gpt-oss-20b-heretic` before chatting in the UI; the model should appear
-as `svjack/gpt-oss-20b-heretic:latest`. Override defaults with environment
-variables, for example:
+`svjack/gpt-oss-20b-heretic:latest` before chatting in the UI; the installer
+creates the tuned `spicy-heretic:latest` alias when the base model is available.
+Use the tuned alias for long creative/RAG chats. Override defaults with
+environment variables, for example:
 
 ```bash
 OPEN_WEBUI_PORT=3101 OPEN_WEBUI_DATA_DIR="$HOME/.local/share/open-webui-test" ./install.sh

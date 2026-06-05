@@ -3,7 +3,8 @@
 L4 Ollama harness for spicy_llm refusal and decensoring research.
 
 **Current target (local parity):**
-- Model: `svjack/gpt-oss-20b-heretic:latest`
+- Base model: `svjack/gpt-oss-20b-heretic:latest`
+- Tuned chat model: `spicy-heretic:latest`
 - Format: GGUF
 - Quantization: Q4_K_M
 - Digest observed on Cloud Run: `2d5466a49f621dd4ae654e5c4a349a7d2d4441ad6a6ff40c15779ee66bc7dd1f`
@@ -53,7 +54,7 @@ gcloud run deploy spicy-llm-backend \
   --cpu=8 --memory=32Gi \
   --port=11434 \
   --timeout=3600 --concurrency=1 --max-instances=1 \
-  --set-env-vars=STOCK_MODEL=svjack/gpt-oss-20b-heretic,PULL_DERESTRICTED=false \
+  --set-env-vars=STOCK_MODEL=svjack/gpt-oss-20b-heretic,TUNED_MODEL=spicy-heretic:latest,SPICY_NUM_PREDICT=4096,PULL_DERESTRICTED=false \
   --allow-unauthenticated
 ```
 
@@ -63,7 +64,7 @@ After the service is live and the model has pulled:
 
 ```bash
 URL="https://spicy-llm-backend-elhm2qjlta-uc.a.run.app"
-MODEL="svjack/gpt-oss-20b-heretic:latest"
+MODEL="spicy-heretic:latest"
 
 # Wait for model pulls to finish
 curl -s "$URL/api/tags" | python3 -c "import json,sys; [print(m['name']) for m in json.load(sys.stdin)['models']]"
@@ -78,7 +79,7 @@ curl -s "$URL/api/chat" \
   -d "$(python3 - <<'PY'
 import json
 print(json.dumps({
-    "model": "svjack/gpt-oss-20b-heretic:latest",
+    "model": "spicy-heretic:latest",
     "messages": [{"role": "user", "content": "Name three large European rivers in one short sentence."}],
     "stream": False,
     "options": {"num_ctx": 2048, "num_predict": 256},
@@ -105,7 +106,18 @@ gcloud artifacts docker images delete \
 ## Notes
 
 - Cold start for `svjack/gpt-oss-20b-heretic` usually takes several minutes while
-  Ollama pulls the ~15 GB model.
+  Ollama pulls the ~15 GB model. Cloud Run's container filesystem is ephemeral,
+  so a replacement backend instance may need to pull again before `/api/tags`
+  lists `spicy-heretic:latest`.
+- The backend creates `spicy-heretic:latest` from the base model with
+  `temperature=0.7`, `top_p=0.9`, `repeat_penalty=1.18`, and
+  `num_predict=4096`. Use this alias for Open WebUI creative/RAG chats; the base
+  model advertises `temperature 1` and reproduced a late-response repetition
+  loop on a large-file RAG prompt.
+- Avoid setting low `num_predict` values for gpt-oss models. Very small caps can
+  be spent in hidden reasoning and return an empty final response with
+  `done_reason=length`; the tuned alias uses a larger cap to terminate runaway
+  thinking while preserving long-form output room.
 - Set `PULL_DERESTRICTED=true` to attempt the derestricted model. Add
   `REQUIRE_DERESTRICTED=true` only for research runs where the service should fail
   closed if the derestricted pull fails.

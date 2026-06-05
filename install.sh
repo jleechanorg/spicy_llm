@@ -8,6 +8,18 @@ PORT="${OPEN_WEBUI_PORT:-3100}"
 DATA_DIR="${OPEN_WEBUI_DATA_DIR:-$HOME/.local/share/open-webui-spicy}"
 OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://host.docker.internal:11434}"
 WEBUI_AUTH="${WEBUI_AUTH:-False}"
+BASE_MODEL="${OLLAMA_BASE_MODEL:-svjack/gpt-oss-20b-heretic:latest}"
+TUNED_MODEL="${OLLAMA_TUNED_MODEL:-spicy-heretic:latest}"
+CREATE_TUNED_MODEL="${CREATE_TUNED_MODEL:-true}"
+SPICY_TEMPERATURE="${SPICY_TEMPERATURE:-0.7}"
+SPICY_TOP_P="${SPICY_TOP_P:-0.9}"
+SPICY_REPEAT_PENALTY="${SPICY_REPEAT_PENALTY:-1.18}"
+SPICY_NUM_PREDICT="${SPICY_NUM_PREDICT:-4096}"
+DEFAULT_MODELS="${OPEN_WEBUI_DEFAULT_MODELS:-$TUNED_MODEL}"
+TASK_MODEL="${OPEN_WEBUI_TASK_MODEL:-$TUNED_MODEL}"
+BYPASS_MODEL_ACCESS_CONTROL="${OPEN_WEBUI_BYPASS_MODEL_ACCESS_CONTROL:-True}"
+DEFAULT_MODEL_PARAMS="${OPEN_WEBUI_DEFAULT_MODEL_PARAMS:-{\"think\":\"low\"}}"
+ENABLE_EVALUATION_ARENA_MODELS="${OPEN_WEBUI_ENABLE_EVALUATION_ARENA_MODELS:-False}"
 
 die() {
   printf 'error: %s\n' "$*" >&2
@@ -66,6 +78,26 @@ mkdir -p "$DATA_DIR"
 
 if curl -fsS http://localhost:11434/api/tags >/dev/null 2>&1; then
   printf 'Ollama is reachable at http://localhost:11434\n'
+  if [ "$CREATE_TUNED_MODEL" = "true" ]; then
+    if command -v ollama >/dev/null 2>&1 && ollama show "$BASE_MODEL" >/dev/null 2>&1; then
+      modelfile="$(mktemp)"
+      cat > "$modelfile" <<EOF
+FROM $BASE_MODEL
+PARAMETER temperature $SPICY_TEMPERATURE
+PARAMETER top_p $SPICY_TOP_P
+PARAMETER repeat_penalty $SPICY_REPEAT_PENALTY
+PARAMETER num_predict $SPICY_NUM_PREDICT
+EOF
+      if ollama create "$TUNED_MODEL" -f "$modelfile" >/dev/null; then
+        printf 'Created tuned Ollama model %s from %s\n' "$TUNED_MODEL" "$BASE_MODEL"
+      else
+        printf '%s\n' "warning: failed to create tuned model $TUNED_MODEL; continuing with Open WebUI setup." >&2
+      fi
+      rm -f "$modelfile"
+    else
+      printf '%s\n' "warning: could not create tuned model $TUNED_MODEL; pull $BASE_MODEL first or rerun with CREATE_TUNED_MODEL=false." >&2
+    fi
+  fi
 else
   printf '%s\n' "warning: Ollama is not reachable at http://localhost:11434; start it with \`ollama serve\` before chatting." >&2
 fi
@@ -89,6 +121,11 @@ else
     --add-host=host.docker.internal:host-gateway \
     -e "OLLAMA_BASE_URL=$OLLAMA_BASE_URL" \
     -e "WEBUI_AUTH=$WEBUI_AUTH" \
+    -e "DEFAULT_MODELS=$DEFAULT_MODELS" \
+    -e "TASK_MODEL=$TASK_MODEL" \
+    -e "BYPASS_MODEL_ACCESS_CONTROL=$BYPASS_MODEL_ACCESS_CONTROL" \
+    -e "DEFAULT_MODEL_PARAMS=$DEFAULT_MODEL_PARAMS" \
+    -e "ENABLE_EVALUATION_ARENA_MODELS=$ENABLE_EVALUATION_ARENA_MODELS" \
     -v "$DATA_DIR:/app/backend/data" \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
@@ -109,10 +146,13 @@ Data:     $DATA_DIR
 Database: $DATA_DIR/webui.db
 Container: $CONTAINER_NAME
 
-Before chatting, ensure Ollama is running on the host and the Heretic model is pulled:
+Before chatting, ensure Ollama is running on the host and the Heretic base model is pulled:
   ollama serve
-  ollama pull svjack/gpt-oss-20b-heretic
-Then select svjack/gpt-oss-20b-heretic:latest in Open WebUI.
+  ollama pull $BASE_MODEL
+The installer creates $TUNED_MODEL with temperature=$SPICY_TEMPERATURE,
+top_p=$SPICY_TOP_P, repeat_penalty=$SPICY_REPEAT_PENALTY, and
+num_predict=$SPICY_NUM_PREDICT when the base model is available. Use
+$TUNED_MODEL in Open WebUI for long creative/RAG chats.
 
 Manage it with:
   docker start $CONTAINER_NAME

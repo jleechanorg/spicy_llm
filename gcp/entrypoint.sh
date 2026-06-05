@@ -34,6 +34,12 @@ STOCK_MODEL="${STOCK_MODEL:-hf.co/unsloth/gpt-oss-20b-GGUF:gpt-oss-20b-Q4_K_M}"
 HERETIC_MODEL="${HERETIC_MODEL:-hf.co/Mungert/gpt-oss-20b-Derestricted-GGUF:gpt-oss-20b-Derestricted-q4_k_m}"
 PULL_DERESTRICTED="${PULL_DERESTRICTED:-false}"
 REQUIRE_DERESTRICTED="${REQUIRE_DERESTRICTED:-false}"
+CREATE_TUNED_MODEL="${CREATE_TUNED_MODEL:-true}"
+TUNED_MODEL="${TUNED_MODEL:-spicy-heretic:latest}"
+SPICY_TEMPERATURE="${SPICY_TEMPERATURE:-0.7}"
+SPICY_TOP_P="${SPICY_TOP_P:-0.9}"
+SPICY_REPEAT_PENALTY="${SPICY_REPEAT_PENALTY:-1.18}"
+SPICY_NUM_PREDICT="${SPICY_NUM_PREDICT:-4096}"
 
 echo "[entrypoint] pulling stock model: ${STOCK_MODEL}"
 ollama pull "${STOCK_MODEL}"
@@ -49,6 +55,20 @@ if [ "${PULL_DERESTRICTED}" = "true" ]; then
     fi
 else
     echo "[entrypoint] skipping derestricted model pull (PULL_DERESTRICTED=false)"
+fi
+
+if [ "${CREATE_TUNED_MODEL}" = "true" ]; then
+    echo "[entrypoint] creating tuned chat model ${TUNED_MODEL} from ${STOCK_MODEL}"
+    cat > /tmp/spicy-heretic.Modelfile <<EOF
+FROM ${STOCK_MODEL}
+PARAMETER temperature ${SPICY_TEMPERATURE}
+PARAMETER top_p ${SPICY_TOP_P}
+PARAMETER repeat_penalty ${SPICY_REPEAT_PENALTY}
+PARAMETER num_predict ${SPICY_NUM_PREDICT}
+EOF
+    ollama create "${TUNED_MODEL}" -f /tmp/spicy-heretic.Modelfile
+else
+    echo "[entrypoint] skipping tuned model creation (CREATE_TUNED_MODEL=false)"
 fi
 
 echo "[entrypoint] final tag list:"
