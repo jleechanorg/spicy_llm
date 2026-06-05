@@ -12,7 +12,7 @@ env/
 .ruff_cache/
 
 # Heretic / model artifacts (large, regenerable)
-results/
+# Track small transcripts + reports inside results/; ignore heavy model files
 *.gguf
 *.safetensors
 *.bin
@@ -20,6 +20,29 @@ results/
 *.pth
 checkpoints/
 abliterated-*/
+models/
+hf_cache/
+logs/
+nohup.out
+*.log
+
+# Everything else under results/ is ignored by default
+results/*
+# ...except the small reproducible artifacts we want committed
+!results/.gitkeep
+!results/**/
+!results/**/transcript*.txt
+!results/**/prompt.txt
+!results/**/benign.txt
+!results/**/REPORT.md
+!results/**/summary.json
+!results/**/NOTES.md
+!results/**/config*.toml
+
+# Full heretic upstream source — clone separately, see heretic/SOURCE.md
+# Convert to a git submodule when reproducibility matters:
+#   git submodule add https://github.com/p-e-w/heretic heretic
+heretic/
 
 # Ollama
 Modelfile.local
@@ -34,9 +57,3 @@ Modelfile.local
 .vscode/
 *.swp
 *.swo
-
-# Logs
-*.log
-*.out
-nohup.out
-heretic/
