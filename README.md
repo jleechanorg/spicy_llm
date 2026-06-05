@@ -18,6 +18,7 @@ Abliterated models are colloquially called "uncensored" or "spicy" in the open-s
 ```
 spicy_llm/
 ├── README.md                 # this file — current status
+├── USAGE_POLICY.md           # model/tool license + usage notes
 ├── docs/
 │   ├── RESEARCH_PLAN.md      # M4 Pro test plan, model picks, phases
 │   ├── BENCHMARK_PROTOCOL.md # how to A/B test stock vs abliterated (TODO)
@@ -68,24 +69,40 @@ The plan was updated to use **`svjack/gpt-oss-20b-heretic`** (20B MoE, ~15 GB). 
 ## Quick start (intended)
 
 ```bash
-# 1. Install heretic (pinned)
+# 1. Optional: start a local chat UI for Ollama
+./install.sh
+# Open http://127.0.0.1:3100
+
+# 2. Install heretic (pinned)
 uv tool install heretic-llm
 
-# 2. Start Ollama
+# 3. Start Ollama
 ollama serve &
 ollama pull gpt-oss:20b        # reference baseline
 ollama pull gemma3:12b         # reference benchmark target
 
-# 3. Smoke test a prebuilt heretic model (no DIY ablation)
+# 4. Smoke test a prebuilt heretic model (no DIY ablation)
 ollama pull svjack/gpt-oss-20b-heretic
 ollama run  svjack/gpt-oss-20b-heretic  "Explain how a transistor works."
 
-# 4. Ablate a small model end-to-end (DIY)
+# 5. Ablate a small model end-to-end (DIY)
 heretic --model Qwen/Qwen3-4B-Instruct-2507 \
         --batch-size 32 --max-batch-size 32 \
         --print-responses --no-plot-residuals \
         --output-dir ./results/qwen3-4b-heretic
 ```
+
+`./install.sh` runs Open WebUI in Docker on `127.0.0.1:3100` and stores chat
+history/config locally in `~/.local/share/open-webui-spicy`. Override defaults
+with environment variables, for example:
+
+```bash
+OPEN_WEBUI_PORT=3101 OPEN_WEBUI_DATA_DIR="$HOME/.local/share/open-webui-test" ./install.sh
+```
+
+For hosted GPU testing on GCP Cloud Run, see [gcp/README.md](gcp/README.md).
+That path contains the L4 GPU Docker image, deploy command, service URL, and
+curl examples for stock vs heretic Ollama prompts.
 
 See **[docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md)** for the full phased plan, hardware constraints, and the M4 Pro batch-128 workaround.
 
@@ -93,11 +110,21 @@ See **[docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md)** for the full phased plan,
 
 - [p-e-w/heretic](https://github.com/p-e-w/heretic) — the abliteration tool (22.4k ⭐, AGPL-3.0, v1.3.0)
 - [svjack/gpt-oss-20b-heretic](https://ollama.com/svjack/gpt-oss-20b-heretic) — prebuilt 20B MoE on Ollama registry
+- [openai/gpt-oss-20b](https://huggingface.co/openai/gpt-oss-20b) — official base model, Apache-2.0
+- [openai/gpt-oss](https://github.com/openai/gpt-oss) — official reference repo and usage policy
 - [p-e-w/Qwen3-4B-Instruct-2507-heretic](https://huggingface.co/p-e-w/Qwen3-4B-Instruct-2507-heretic) — author's own 16 GB-VRAM pick
 - [mlabonne/harmless_alpaca](https://huggingface.co/datasets/mlabonne/harmless_alpaca) — "good" prompts (default in Heretic)
 - [mlabonne/harmful_behaviors](https://huggingface.co/datasets/mlabonne/harmful_behaviors) — "bad" prompts (default in Heretic)
 - [Originating Slack thread](https://jleechanai.slack.com/archives/C09GRLXF9GR/p1780291876.887979)
 
-## License
+## License and usage
 
-This research repo is **AGPL-3.0** to match the upstream [p-e-w/heretic](https://github.com/p-e-w/heretic) license. Any model output is bound by its own upstream license.
+This repo contains several different license surfaces:
+
+- **Repository docs/scripts:** AGPL-3.0-or-later, matching upstream [p-e-w/heretic](https://github.com/p-e-w/heretic).
+- **Heretic tool:** AGPL-3.0-or-later. If we distribute modified Heretic code or run modified Heretic as a network service, AGPL source obligations may apply.
+- **Official `openai/gpt-oss-20b` base model:** Apache-2.0, with OpenAI's gpt-oss usage policy requiring compliance with applicable law.
+- **Local `svjack/gpt-oss-20b-heretic` Ollama model:** local `ollama show` embeds Apache-2.0, but the Ollama page has no readme or separate license notes. Treat it as an Apache-2.0-derived community repack with incomplete provenance metadata.
+- **Generated outputs:** not licensed as repo code by default. Use outputs subject to applicable law and normal output-risk review.
+
+For redistribution or commercial use, prefer reproducing from the official `openai/gpt-oss-20b` weights and documenting the Heretic ablation process instead of relying only on the community Ollama repack. See [USAGE_POLICY.md](USAGE_POLICY.md).
