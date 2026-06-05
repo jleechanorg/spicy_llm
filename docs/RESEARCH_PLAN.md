@@ -27,10 +27,11 @@ M4 Pro unified memory is **shared with system**. Batch sizes that overshoot 8 GB
 
 ## Model picks (ranked for M4 Pro 51 GB)
 
-1. **🥇 `brianmatzelle/gpt-oss-heretic`** — pre-abliterated, Ollama-available
-   - 20B MoE, MXFP4-quantized, 13 GB in RAM
-   - "the best uncensored model I have tried yet… doesn't destroy the model's intelligence" — Reddit consensus
-   - Fits in current RAM with headroom → **best smoke-test target**
+1. **🥇 `svjack/gpt-oss-20b-heretic`** — pre-abliterated 20B, Ollama-available
+   - 20B MoE, MXFP4-quantized, ~16 GB in RAM
+   - Reddit consensus: "the best uncensored model I have tried yet… doesn't destroy the model's intelligence"
+   - Fits in current 51 GB with headroom → **best smoke-test target**
+   - ⚠️ `brianmatzelle/gpt-oss-heretic` is the **120B** build — too large for M4 Pro 51 GB, ruled out
 
 2. **🥈 `gemma3:12b` DIY abliteration** — reference benchmark
    - 8.1 GB, the model p-e-w's published 3/100-refusal benchmark is on
@@ -49,7 +50,7 @@ M4 Pro unified memory is **shared with system**. Batch sizes that overshoot 8 GB
 
 ### Phase 1 — Smoke test (no ablation)
 
-- Pull `brianmatzelle/gpt-oss-heretic` from Ollama registry
+- Pull `svjack/gpt-oss-20b-heretic` from Ollama registry
 - Send a known refused prompt to both `gpt-oss:20b` (stock) and the heretic build
 - Compare response quality, refusal rate, KL divergence (subjective)
 - **Pass criteria:** heretic build refuses measurably less, output is still coherent
