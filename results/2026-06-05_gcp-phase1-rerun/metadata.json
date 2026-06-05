@@ -1,0 +1,18 @@
+{
+  "run_date": "2026-06-05",
+  "endpoint": "https://spicy-llm-test-754683067800.us-central1.run.app",
+  "infrastructure": {
+    "service": "spicy-llm-test",
+    "region": "us-central1",
+    "gpu": "nvidia-l4",
+    "cpu": 8,
+    "memory_gb": 32,
+    "ollama_version": "0.30.5"
+  },
+  "models": {
+    "stock": "gpt-oss:20b",
+    "abliterated": "svjack/gpt-oss-20b-heretic"
+  },
+  "probes": ["drug_synthesis", "explicit_erotica", "fibonacci_benign"],
+  "description": "Phase 1 A/B re-run on GCP Cloud Run L4 endpoint. Comparing stock vs heretic abliterated gpt-oss:20b on refused (drug synthesis, explicit erotica) and benign (Fibonacci) prompts."
+}

@@ -1,0 +1,42 @@
+{
+  "run_date": "2026-06-05",
+  "status": "BLOCKED_CUDA_INCOMPATIBILITY",
+  "endpoint": "https://spicy-llm-test-754683067800.us-central1.run.app",
+  "infrastructure": {
+    "service": "spicy-llm-test",
+    "region": "us-central1",
+    "gpu": "nvidia-l4",
+    "gpu_arch": "Ada Lovelace (sm_89)",
+    "cpu": 8,
+    "memory_gb": 32,
+    "ollama_version": "0.30.5"
+  },
+  "models_pulled": {
+    "stock": "gpt-oss:20b (MXFP4, 13 GB)",
+    "heretic": "svjack/gpt-oss-20b-heretic (MXFP4, 15 GB)"
+  },
+  "inference_results": {
+    "stock_gpu": {
+      "status": "CUDA_ERROR",
+      "error": "llama-server process has terminated: CUDA error: device kernel image is invalid"
+    },
+    "stock_cpu_fallback": {
+      "status": "OOM_KILLED",
+      "error": "llama-server process has terminated: signal: killed",
+      "note": "num_gpu=0 forces 20B MXFP4 to CPU; OOM-killed in 32GB container"
+    },
+    "heretic_gpu": {
+      "status": "CUDA_ERROR",
+      "error": "llama-server process has terminated: CUDA error: device kernel image is invalid"
+    }
+  },
+  "root_cause": "gpt-oss:20b uses MXFP4 quantization (Microscaling FP4), which requires NVIDIA Blackwell GPU (sm_100+, e.g. RTX 5000, H200 NVL). Cloud Run L4 is Ada Lovelace (sm_89). MXFP4 kernels compiled for Blackwell fail with 'device kernel image is invalid' on Ada Lovelace. svjack/gpt-oss-20b-heretic is derived from gpt-oss:20b and inherits the same MXFP4 format.",
+  "phase1_probes": "NOT RUN — all inference failed",
+  "notes": [
+    "Both models pulled successfully (28 GB total, ~12 min)",
+    "Ollama 0.30.5 is correct version — 0.5.7 gave 412 error",
+    "Model pull works fine; only inference requires Blackwell",
+    "For L4-compatible test: use Q4_K_M quantized models (e.g. qwen3:14b, llama3.3:70b-q4)",
+    "For MXFP4 models: Cloud Run would need H100 NVL or future Blackwell GPU tier"
+  ]
+}
