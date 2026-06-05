@@ -11,7 +11,7 @@ FROM nvidia/cuda:12.4.0-base-ubuntu22.04
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# cache-bust: v4 (zstd fix + direct tar.zst binary install)
+# cache-bust: v5 (Option A: Q4_K_M GGUF models, HF pull, no MXFP4)
 # Install runtime deps: curl (for healthcheck), ca-certs, zstd (needed to extract ollama .tar.zst)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates gnupg zstd \
