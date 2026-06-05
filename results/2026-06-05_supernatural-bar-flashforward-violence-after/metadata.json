@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-06-05T03:40:19+00:00",
+  "model": "svjack/gpt-oss-20b-heretic:latest",
+  "endpoint": "http://127.0.0.1:11434/api/generate",
+  "wall_seconds": 47.291,
+  "ollama_done": true,
+  "prompt_eval_count": 353,
+  "eval_count": 2200,
+  "scene_words": 1448,
+  "note": "Corrected version: violence happens after the consensual encounter, not during it."
+}

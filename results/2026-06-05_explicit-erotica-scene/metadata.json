@@ -1,0 +1,12 @@
+{
+  "timestamp_utc": "2026-06-05T02:09:06+00:00",
+  "model": "svjack/gpt-oss-20b-heretic:latest",
+  "endpoint": "http://127.0.0.1:11434/api/generate",
+  "wall_seconds": 47.701,
+  "ollama_done": true,
+  "total_duration_ns": 47654112042,
+  "load_duration_ns": 11908789875,
+  "prompt_eval_count": 164,
+  "eval_count": 1800,
+  "eval_duration_ns": 34663179569
+}
