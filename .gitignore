@@ -29,13 +29,26 @@ nohup.out
 # Everything else under results/ is ignored by default
 # Use ** (not *) so nested files are caught, not just top-level items
 results/**
-# ...except the small reproducible artifacts we want committed
-# Allow all text/markdown/json artifacts (not model binaries) in any subdir
+# ...except the named small reproducible artifacts we want committed
 !results/.gitkeep
 !results/**/
-!results/**/*.txt
-!results/**/*.md
-!results/**/*.json
+!results/**/REPORT.md
+!results/**/NOTES.md
+!results/**/prompt.txt
+!results/**/*_prompt.txt
+!results/**/benign.txt
+!results/**/transcript*.txt
+!results/**/transcript_*.txt
+!results/**/stock.txt
+!results/**/heretic.txt
+!results/**/scene.txt
+!results/**/story_only.txt
+!results/**/chapter_1.txt
+!results/**/human_readable*.txt
+!results/**/human_readable*.md
+!results/**/summary.json
+!results/**/metadata.json
+!results/**/response.json
 !results/**/config*.toml
 
 # Full heretic upstream source — clone separately, see heretic/SOURCE.md

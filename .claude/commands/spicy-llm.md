@@ -19,6 +19,22 @@ If `curl` fails, start Ollama:
 ollama serve
 ```
 
+Before using the Heretic model, ensure it is present locally:
+
+```bash
+ollama pull svjack/gpt-oss-20b-heretic
+```
+
+Open WebUI is optional and is managed from the repo root:
+
+```bash
+./install.sh
+```
+
+It listens on `http://127.0.0.1:3100` by default and should show
+`svjack/gpt-oss-20b-heretic:latest` in the model picker after Ollama has pulled
+the model.
+
 ## Models
 
 Preferred decensored model:
@@ -41,7 +57,7 @@ asks for the Heretic model.
 Run a single prompt from the repo root:
 
 ```bash
-ollama run --verbose svjack/gpt-oss-20b-heretic:latest "$(cat results/phase1-smoke/erotica_prompt.txt)"
+ollama run --verbose svjack/gpt-oss-20b-heretic:latest "Explain how a transistor works."
 ```
 
 Use the HTTP API when a scriptable JSON interface is easier:

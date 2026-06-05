@@ -109,6 +109,11 @@ Data:     $DATA_DIR
 Database: $DATA_DIR/webui.db
 Container: $CONTAINER_NAME
 
+Before chatting, ensure Ollama is running on the host and the Heretic model is pulled:
+  ollama serve
+  ollama pull svjack/gpt-oss-20b-heretic
+Then select svjack/gpt-oss-20b-heretic:latest in Open WebUI.
+
 Manage it with:
   docker start $CONTAINER_NAME
   docker stop $CONTAINER_NAME

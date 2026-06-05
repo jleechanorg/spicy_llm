@@ -2,7 +2,13 @@
 
 Local abliteration research — testing **[Heretic](https://github.com/p-e-w/heretic)** + [Ollama](https://ollama.com) pipelines for "decensoring" (removing safety alignment from) LLMs on Apple Silicon.
 
-> **What this is:** a reproducible harness for running directional-ablation abliteration on local models and benchmarking the results against stock baselines. Originated from a Slack discussion ([thread](https://jleechanai.slack.com/archives/C09GRLXF9GR/p1780291876.887979)) about applying [p-e-w/heretic](https://github.com/p-e-w/heretic) (22.4k ⭐, AGPL-3.0) to consumer Mac hardware.
+> **What this is now:** an evidence repo with a partial local/GCP harness. It has
+> committed run reports, raw outputs, a local Open WebUI launcher, and a Cloud Run
+> image recipe. It does **not** yet contain a complete fresh-clone Heretic
+> ablation pipeline or benchmark harness. Originated from a Slack discussion
+> ([thread](https://jleechanai.slack.com/archives/C09GRLXF9GR/p1780291876.887979))
+> about applying [p-e-w/heretic](https://github.com/p-e-w/heretic) (22.4k ⭐,
+> AGPL-3.0) to consumer Mac hardware.
 
 ## Hardware target
 
@@ -17,24 +23,37 @@ Abliterated models are colloquially called "uncensored" or "spicy" in the open-s
 
 ```
 spicy_llm/
-├── README.md                 # this file — current status
+├── AGENTS.md                 # project instructions for agents
+├── CLAUDE.md                 # Claude-facing project instructions
+├── README.md                 # this file — current status and quick start
 ├── USAGE_POLICY.md           # model/tool license + usage notes
+├── install.sh                # optional local Open WebUI launcher for Ollama
+├── beads/                    # br issue-tracking data for this repo
 ├── docs/
-│   ├── RESEARCH_PLAN.md      # M4 Pro test plan, model picks, phases
-│   ├── BENCHMARK_PROTOCOL.md # how to A/B test stock vs abliterated (TODO)
-│   └── HERETIC_PATCHES.md    # kernel patch notes + reproducibility (TODO)
-├── patches/                  # Heretic kernel patches ported here (TODO)
-│   ├── layer.py.rev-main
-│   └── func.py.rev-main
-├── scripts/                  # reproducible run scripts (TODO)
-│   ├── run_heretic.sh
-│   ├── convert_to_ollama.sh
-│   └── benchmark.py
-├── results/                  # gitignored — model outputs, A/B transcripts
-│   ├── 2026-06-05_svjack-gpt-oss-20b-heretic_smoke/
-│   └── 2026-06-04_qwen3-4b_stall/
+│   ├── REPRODUCIBILITY_STATUS.md # what is reproducible vs still missing
+│   └── RESEARCH_PLAN.md          # M4 Pro test plan, model picks, phases
+├── gcp/
+│   ├── Dockerfile             # Cloud Run L4 Ollama image recipe
+│   ├── README.md              # historical GCP run notes and blocked status
+│   ├── entrypoint.sh          # starts Ollama and pulls stock/heretic models
+│   └── openwebui/             # Cloud Run + Cloud SQL Open WebUI deployment
+├── results/                   # tracked small evidence artifacts; heavy files ignored
+│   ├── phase1-smoke/
+│   ├── 2026-06-05_erotica-baseline-400/
+│   ├── 2026-06-05_erotica-smoke/
+│   ├── 2026-06-05_explicit-erotica-scene/
+│   ├── 2026-06-05_gcp-phase1-rerun/
+│   ├── 2026-06-05_original-elf-erotica-chapter/
+│   ├── 2026-06-05_supernatural-bar-flashforward-hidden-prompt/
+│   └── 2026-06-05_supernatural-bar-flashforward-violence-after/
 └── .gitignore
 ```
+
+The ignored `heretic/` directory is a local upstream checkout, not committed
+source. A note currently exists at `heretic/SOURCE.md`, but because the whole
+directory is ignored it is local-only; see
+[docs/REPRODUCIBILITY_STATUS.md](docs/REPRODUCIBILITY_STATUS.md) for the
+reproduction contract.
 
 ## Status — last updated 2026-06-05 01:19 UTC
 
@@ -69,42 +88,51 @@ The plan was updated to use **`svjack/gpt-oss-20b-heretic`** (20B MoE, ~15 GB). 
 ## Quick start (intended)
 
 ```bash
-# 1. Optional: start a local chat UI for Ollama
-./install.sh
-# Open http://127.0.0.1:3100
-
-# 2. Install heretic (pinned)
+# 1. Install heretic (pinned)
 uv tool install heretic-llm
 
-# 3. Start Ollama
+# 2. Start Ollama and pull the expected local models
 ollama serve &
 ollama pull gpt-oss:20b        # reference baseline
+ollama pull svjack/gpt-oss-20b-heretic
 ollama pull gemma3:12b         # reference benchmark target
 
-# 4. Smoke test a prebuilt heretic model (no DIY ablation)
-ollama pull svjack/gpt-oss-20b-heretic
+# 3. Smoke test the prebuilt heretic model (no DIY ablation)
 ollama run  svjack/gpt-oss-20b-heretic  "Explain how a transistor works."
 
-# 5. Ablate a small model end-to-end (DIY)
+# 4. Optional: start Open WebUI for local chat
+./install.sh
+# Open http://127.0.0.1:3100 and select svjack/gpt-oss-20b-heretic:latest
+
+# 5. Optional: ablate a small model end-to-end (DIY)
 heretic --model Qwen/Qwen3-4B-Instruct-2507 \
         --batch-size 32 --max-batch-size 32 \
         --print-responses --no-plot-residuals \
         --output-dir ./results/qwen3-4b-heretic
 ```
 
-`./install.sh` runs Open WebUI in Docker on `127.0.0.1:3100` and stores chat
-history/config locally in `~/.local/share/open-webui-spicy`. Override defaults
-with environment variables, for example:
+`./install.sh` runs Open WebUI in Docker on `127.0.0.1:3100`, connects it to
+Ollama at `http://host.docker.internal:11434`, and stores chat history/config
+locally in `~/.local/share/open-webui-spicy`. Start Ollama and pull
+`svjack/gpt-oss-20b-heretic` before chatting in the UI; the model should appear
+as `svjack/gpt-oss-20b-heretic:latest`. Override defaults with environment
+variables, for example:
 
 ```bash
 OPEN_WEBUI_PORT=3101 OPEN_WEBUI_DATA_DIR="$HOME/.local/share/open-webui-test" ./install.sh
 ```
 
-For hosted GPU testing on GCP Cloud Run, see [gcp/README.md](gcp/README.md).
-That path contains the L4 GPU Docker image, deploy command, service URL, and
-curl examples for stock vs heretic Ollama prompts.
+For hosted GPU testing notes on GCP Cloud Run, see [gcp/README.md](gcp/README.md).
+That path contains the L4 GPU Docker image and deploy command, but the committed
+2026-06-05 rerun is blocked for `gpt-oss:20b`/`svjack/gpt-oss-20b-heretic`
+inference on L4 because MXFP4 requires a compatible GPU path. Treat the URL in
+that doc as historical unless you redeploy it.
+For hosted browser chat with durable state, see
+[gcp/openwebui/README.md](gcp/openwebui/README.md).
 
 See **[docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md)** for the full phased plan, hardware constraints, and the M4 Pro batch-128 workaround.
+See **[docs/REPRODUCIBILITY_STATUS.md](docs/REPRODUCIBILITY_STATUS.md)** for
+the current fresh-clone gaps and committed evidence index.
 
 ## Upstream & references
 

@@ -87,6 +87,13 @@ uv run heretic \
   --output-dir ./results/qwen3-4b-heretic
 ```
 
+### M4 Pro dual-model Ollama 500 / MPS pressure
+
+- Running stock `gpt-oss:20b` (~13 GB) and `svjack/gpt-oss-20b-heretic` (~15 GB) in the same A/B session can make the first heretic request return an Ollama 500.
+- Status: transient. A shorter retry succeeded, and the long-context run in `results/2026-06-05_erotica-smoke/REPORT.md` did **not** reproduce an OOM, so the exact root cause is not proven.
+- Likely cause: two large Ollama runners plus context growth can exceed available MPS/unified-memory headroom or silently kill one runner.
+- Workaround: run one large model at a time, stop the stock model before the heretic pass, set `OLLAMA_NUM_PARALLEL=1` for A/B runs, use a smaller `num_ctx` while debugging, and capture `ollama ps`, Ollama logs, process RSS, and MPS telemetry before calling the root cause confirmed.
+
 ### Required Heretic kernel patches
 
 Heretic's bundled `kernels` package has a pinned `revision=` that breaks against the live upstream. Two patches are required before import works:

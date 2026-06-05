@@ -37,6 +37,22 @@ If the endpoint is down, start Ollama:
 ollama serve
 ```
 
+Before using the Heretic model, ensure it is pulled:
+
+```bash
+ollama pull svjack/gpt-oss-20b-heretic
+```
+
+For browser chat, start Open WebUI from the repo root:
+
+```bash
+./install.sh
+```
+
+Open `http://127.0.0.1:3100` and select
+`svjack/gpt-oss-20b-heretic:latest` in the model picker. Do not use Open WebUI
+as proof that Ollama is healthy unless the Ollama API check above also passes.
+
 ## Model Selection
 
 Use this decensored model unless the user names another one:
