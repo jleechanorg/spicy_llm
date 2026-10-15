@@ -11,7 +11,7 @@ FROM nvidia/cuda:12.4.0-base-ubuntu22.04
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# cache-bust: v6 (Option A: Q4_K_M GGUF models, Ollama 0.12.3 CUDA runner)
+# cache-bust: v7 (Option B: model blobs baked into an image layer, Ollama 0.12.3 CUDA runner)
 # Install runtime deps: curl for healthcheck/downloads, ca-certs, and gzip for the Ollama release tgz.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates gnupg gzip \
@@ -29,25 +29,43 @@ RUN curl -fsSL "https://github.com/ollama/ollama/releases/download/v${OLLAMA_VER
 # Environment for Cloud Run:
 # - OLLAMA_HOST: listen on 0.0.0.0:11434 (Cloud Run expects $PORT)
 # - OLLAMA_KEEP_ALIVE: keep models loaded (default 5m, we want 24h for the test)
-# - OLLAMA_MODELS: store model blobs in /tmp/ollama (writable in Cloud Run)
+# - OLLAMA_MODELS: /models, BAKED INTO THIS IMAGE by the bake step below. It must NOT
+#   point at /tmp: Cloud Run's /tmp is memory-backed, so a 15.8 GB store there is
+#   wiped on every instance restart (forcing a fresh 15.8 GB pull) and eats half of
+#   the 32 GiB memory limit.
 # - OLLAMA_NUM_PARALLEL: limit to 1 to avoid dual-load OOM surprise
 ENV OLLAMA_HOST=0.0.0.0:11434 \
     OLLAMA_KEEP_ALIVE=24h \
-    OLLAMA_MODELS=/tmp/ollama \
+    OLLAMA_MODELS=/models \
     OLLAMA_NUM_PARALLEL=1 \
     OLLAMA_DEBUG=2 \
     PORT=11434
 
 # Add a non-root user to match Cloud Run's default security context
 RUN useradd -m -u 1000 -s /bin/bash ollama || true
-RUN mkdir -p /tmp/ollama && chown -R ollama:ollama /tmp/ollama
+
+# Bake the model blobs into an image layer so that an instance restart no longer
+# re-downloads 15.8 GB. Runs as root, then hands /models to the ollama user.
+# Values mirror the entrypoint.sh defaults so boot-time `ollama create` is a no-op.
+ARG STOCK_MODEL=svjack/gpt-oss-20b-heretic
+ARG TUNED_MODEL=spicy-heretic:latest
+ARG SPICY_TEMPERATURE=0.7
+ARG SPICY_TOP_P=0.9
+ARG SPICY_REPEAT_PENALTY=1.18
+ARG SPICY_NUM_PREDICT=4096
+COPY --chown=ollama:ollama bake_models.sh /home/ollama/bake_models.sh
+RUN chmod +x /home/ollama/bake_models.sh \
+    && mkdir -p /models \
+    && /home/ollama/bake_models.sh \
+    && chown -R ollama:ollama /models
+
 USER ollama
 WORKDIR /home/ollama
 
 # Startup script:
 # 1. Start `ollama serve` in background
 # 2. Wait for it to be healthy
-# 3. Pull both models (idempotent — skips if already present in /tmp/ollama)
+# 3. Pull both models (idempotent — a no-op when the blobs are already in /models)
 # 4. Tail the ollama logs to keep the container alive
 COPY --chown=ollama:ollama entrypoint.sh /home/ollama/entrypoint.sh
 RUN chmod +x /home/ollama/entrypoint.sh
