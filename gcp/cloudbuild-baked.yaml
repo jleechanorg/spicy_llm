@@ -1,0 +1,20 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile
+      # Reuse the previous baked image's layers. Without --cache-from, Cloud Build does not
+      # persist Docker layer cache between builds, so EVERY rebuild re-pulls the 15 GB model
+      # from the Ollama registry (~25 min). With it, an entrypoint-only change rebuilds in
+      # about a minute because the bake layer is reused.
+      - --cache-from
+      - us-central1-docker.pkg.dev/ai-universe-2025/spicy-ollama-gpu/spicy-llm-ollama:gpu-l4-baked
+      - -t
+      - us-central1-docker.pkg.dev/ai-universe-2025/spicy-ollama-gpu/spicy-llm-ollama:gpu-l4-baked
+      - .
+images:
+  - us-central1-docker.pkg.dev/ai-universe-2025/spicy-ollama-gpu/spicy-llm-ollama:gpu-l4-baked
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 3600s
