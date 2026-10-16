@@ -11,7 +11,7 @@ FROM nvidia/cuda:12.4.0-base-ubuntu22.04
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# cache-bust: v7 (Option B: model blobs baked into an image layer, Ollama 0.12.3 CUDA runner)
+# cache-bust: v8 (Option B: baked model blobs; Ollama 0.40.5 CUDA runner for gpt-oss tool calls)
 # Install runtime deps: curl for healthcheck/downloads, ca-certs, and gzip for the Ollama release tgz.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates gnupg gzip \
@@ -19,7 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Ollama Linux. Version 0.12.3 is pinned because later CUDA runners
 # have reproduced "device kernel image is invalid" on L4/sm_89 with gpt-oss.
-ARG OLLAMA_VERSION=0.12.3
+# 0.12.3 was far too old: its harmony tool-call parser could not handle gpt-oss tool calls,
+# so EVERY tool call failed with HTTP 500 'error parsing tool call: raw=...<|call|>commentary
+# to=functions.spicy_search <|constrain|>json...'. Both the tuned alias AND the base model
+# failed identically, which ruled out the Modelfile and pointed at the runtime.
+ARG OLLAMA_VERSION=0.40.5
 RUN curl -fsSL "https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tgz" \
       -o /tmp/ollama.tgz \
     && tar -C /usr/local -xzf /tmp/ollama.tgz \
