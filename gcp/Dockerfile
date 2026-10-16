@@ -11,23 +11,38 @@ FROM nvidia/cuda:12.4.0-base-ubuntu22.04
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# cache-bust: v8 (Option B: baked model blobs; Ollama 0.40.5 CUDA runner for gpt-oss tool calls)
+# cache-bust: v8 (Option B: baked blobs; Ollama 0.40.5 for gpt-oss tool calls - CANARY-TEST sm_89)
 # Install runtime deps: curl for healthcheck/downloads, ca-certs, and gzip for the Ollama release tgz.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates gnupg gzip \
+        curl ca-certificates gnupg gzip zstd \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ollama Linux. Version 0.12.3 is pinned because later CUDA runners
-# have reproduced "device kernel image is invalid" on L4/sm_89 with gpt-oss.
-# 0.12.3 was far too old: its harmony tool-call parser could not handle gpt-oss tool calls,
-# so EVERY tool call failed with HTTP 500 'error parsing tool call: raw=...<|call|>commentary
-# to=functions.spicy_search <|constrain|>json...'. Both the tuned alias AND the base model
-# failed identically, which ruled out the Modelfile and pointed at the runtime.
+# Install Ollama Linux.
+#
+# VERSION HISTORY / RISK, read before changing this number.
+#   The pin was originally 0.12.3 because LATER CUDA runners reproduced
+#   "device kernel image is invalid" on L4 / sm_89 with gpt-oss. That is a real
+#   regression risk and the reason this is not a casual bump.
+#   0.12.3 was nevertheless far too old for this product: its harmony tool-call parser
+#   could not handle gpt-oss tool calls, so EVERY tool call failed with HTTP 500
+#   'error parsing tool call: raw=...<|call|>commentary to=functions.spicy_search
+#   <|constrain|>json...'. Both the tuned alias AND the base model failed identically,
+#   which ruled out the Modelfile and pointed at the runtime. Plain chat worked fine on
+#   0.12.3, which is why the deficiency stayed hidden until a tool was actually called.
+#
+#   0.40.5 is the current release. It MUST be validated on a --no-traffic canary for BOTH
+#   (a) a plain generation and (b) a real tool call, because the sm_89 risk above means an
+#   upgrade can plausibly fix tool calling by breaking GPU inference. Do not promote a
+#   build of this without checking both.
+#
+#   Asset naming changed between these versions: newer releases publish
+#   ollama-linux-amd64.tar.zst (zstd), not ollama-linux-amd64.tgz. Hence the `zstd`
+#   package above and the --zstd extraction below.
 ARG OLLAMA_VERSION=0.40.5
-RUN curl -fsSL "https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tgz" \
-      -o /tmp/ollama.tgz \
-    && tar -C /usr/local -xzf /tmp/ollama.tgz \
-    && rm /tmp/ollama.tgz \
+RUN curl -fsSL "https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tar.zst" \
+      -o /tmp/ollama.tar.zst \
+    && tar -C /usr/local --zstd -xf /tmp/ollama.tar.zst \
+    && rm /tmp/ollama.tar.zst \
     && ollama --version
 
 # Environment for Cloud Run:
