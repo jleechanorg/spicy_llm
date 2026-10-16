@@ -58,15 +58,32 @@ else
 fi
 
 if [ "${CREATE_TUNED_MODEL}" = "true" ]; then
-    echo "[entrypoint] creating tuned chat model ${TUNED_MODEL} from ${STOCK_MODEL}"
-    cat > /tmp/spicy-heretic.Modelfile <<EOF
+    # When the image was baked (gcp/bake_models.sh) the tuned model already exists in
+    # /models. Skip creation entirely rather than rewriting it: `ollama create` needs to
+    # write a manifest, and doing that on every boot is pointless churn.
+    if ollama list 2>/dev/null | awk '{print $1}' | grep -Fxq "${TUNED_MODEL}"; then
+        echo "[entrypoint] tuned model ${TUNED_MODEL} already present (baked) - skipping create"
+    else
+        echo "[entrypoint] creating tuned chat model ${TUNED_MODEL} from ${STOCK_MODEL}"
+        # Write the Modelfile to $HOME, NOT /tmp.
+        #
+        # This was a real production outage. bake_models.sh runs as ROOT at image build
+        # time and wrote /tmp/spicy-heretic.Modelfile, which put a root-owned file into the
+        # image layer. At runtime this script runs as the unprivileged `ollama` user, so
+        # `cat > /tmp/spicy-heretic.Modelfile` hit "Permission denied"; with `set -euo
+        # pipefail` the entrypoint aborted, the container exited, and Cloud Run
+        # crash-looped every ~30s. /api/tags still looked healthy in the brief window after
+        # `ollama serve` came up, but every /api/generate returned 503.
+        modelfile="${HOME:-/home/ollama}/spicy-heretic.Modelfile"
+        cat > "${modelfile}" <<EOF
 FROM ${STOCK_MODEL}
 PARAMETER temperature ${SPICY_TEMPERATURE}
 PARAMETER top_p ${SPICY_TOP_P}
 PARAMETER repeat_penalty ${SPICY_REPEAT_PENALTY}
 PARAMETER num_predict ${SPICY_NUM_PREDICT}
 EOF
-    ollama create "${TUNED_MODEL}" -f /tmp/spicy-heretic.Modelfile
+        ollama create "${TUNED_MODEL}" -f "${modelfile}"
+    fi
 else
     echo "[entrypoint] skipping tuned model creation (CREATE_TUNED_MODEL=false)"
 fi

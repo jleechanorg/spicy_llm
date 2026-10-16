@@ -39,14 +39,18 @@ echo "[bake] pulling stock model: ${STOCK_MODEL}"
 ollama pull "${STOCK_MODEL}"
 
 echo "[bake] creating tuned model: ${TUNED_MODEL}"
-cat > /tmp/spicy-heretic.Modelfile <<EOF
+# Use a build-only filename. Writing /tmp/spicy-heretic.Modelfile here would leave a
+# ROOT-OWNED file in the image layer that the runtime `ollama` user cannot overwrite,
+# which crash-looped production (see the note in entrypoint.sh).
+cat > /tmp/bake-modelfile <<EOF
 FROM ${STOCK_MODEL}
 PARAMETER temperature ${SPICY_TEMPERATURE}
 PARAMETER top_p ${SPICY_TOP_P}
 PARAMETER repeat_penalty ${SPICY_REPEAT_PENALTY}
 PARAMETER num_predict ${SPICY_NUM_PREDICT}
 EOF
-ollama create "${TUNED_MODEL}" -f /tmp/spicy-heretic.Modelfile
+ollama create "${TUNED_MODEL}" -f /tmp/bake-modelfile
+rm -f /tmp/bake-modelfile
 
 echo "[bake] baked model list:"
 ollama list
