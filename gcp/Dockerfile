@@ -64,7 +64,8 @@ ENV OLLAMA_HOST=0.0.0.0:11434 \
 RUN useradd -m -u 1000 -s /bin/bash ollama || true
 
 # Bake the model blobs into an image layer so that an instance restart no longer
-# re-downloads 15.8 GB. Runs as root, then hands /models to the ollama user.
+# re-downloads ~19 GB (15.8 GB gpt-oss + ~3.3 GB gemma3:4b for JEV vision). Runs as root,
+# then hands /models to the ollama user.
 # Values mirror the entrypoint.sh defaults so boot-time `ollama create` is a no-op.
 ARG STOCK_MODEL=svjack/gpt-oss-20b-heretic
 ARG TUNED_MODEL=spicy-heretic:latest
@@ -72,6 +73,10 @@ ARG SPICY_TEMPERATURE=0.7
 ARG SPICY_TOP_P=0.9
 ARG SPICY_REPEAT_PENALTY=1.18
 ARG SPICY_NUM_PREDICT=4096
+# Multimodal model for spicy-search's JEV lane. It must advertise the `vision` capability
+# in `ollama show` (bake_models.sh fails the build otherwise); a text-only model here would
+# leave that lane permanently degraded while appearing configured.
+ARG VISION_MODEL=gemma3:4b
 COPY --chown=ollama:ollama bake_models.sh /home/ollama/bake_models.sh
 RUN chmod +x /home/ollama/bake_models.sh \
     && mkdir -p /models \

@@ -38,6 +38,26 @@ fi
 echo "[bake] pulling stock model: ${STOCK_MODEL}"
 ollama pull "${STOCK_MODEL}"
 
+# Vision model for spicy-search's JEV tag-verification lane (`lib/ai/jev.ts` posts scene
+# thumbnails to `OLLAMA_BASE_URL` + `OLLAMA_VISION_MODEL`). spicy-search may send images to
+# NOTHING except this host (AGENTS.md: third-party multimodal hosts ban nudity on the input
+# side), so the ability to *see* must exist here or that lane cannot run at all.
+#
+# Only multimodal tags are valid here - a text-only pull would silently degrade JEV to
+# `llm-unavailable` for every scene while looking like a successful bake. `ollama show`
+# reports the `vision` capability; the bake fails loudly if it is missing.
+VISION_MODEL="${VISION_MODEL:-gemma3:4b}"
+if [ -n "${VISION_MODEL}" ]; then
+    echo "[bake] pulling vision model: ${VISION_MODEL}"
+    ollama pull "${VISION_MODEL}"
+    if ! ollama show "${VISION_MODEL}" 2>/dev/null | grep -q '^ *vision *$'; then
+        echo "[bake] FATAL: ${VISION_MODEL} reports no 'vision' capability; JEV would degrade"
+        ollama show "${VISION_MODEL}" || true
+        exit 1
+    fi
+    echo "[bake] ${VISION_MODEL} advertises the vision capability"
+fi
+
 echo "[bake] creating tuned model: ${TUNED_MODEL}"
 # Use a build-only filename. Writing /tmp/spicy-heretic.Modelfile here would leave a
 # ROOT-OWNED file in the image layer that the runtime `ollama` user cannot overwrite,
