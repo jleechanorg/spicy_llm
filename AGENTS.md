@@ -58,6 +58,42 @@ future reproducible harness second.
 - In chat/review output, avoid quoting operational harmful details; cite the
   file and summarize the evidence at a high level.
 
+## Local iteration before deploy
+
+Verify locally first, then deploy to GCP. `scripts/run_local_server.sh` is the fast
+loop; a Cloud Run build/deploy is the evidence step, not the debugging step.
+
+```bash
+./scripts/run_local_server.sh                    # operator: branch-hashed port, tails UI logs
+./scripts/run_local_server.sh --no-log-stream    # agent: background, returns after health checks
+./scripts/run_local_server.sh --stop             # scoped to this branch
+./scripts/run_local_server.sh --status
+```
+
+- Ports are hashed from the branch into 3100-3999, and the Open WebUI container
+  (`open-webui-spicy-<branch>`) and data dir (`~/.local/share/open-webui-spicy/<branch>`)
+  are branch-scoped, so concurrent worktrees do not collide.
+- The default run **never downloads a model**. If the base model is missing it prints
+  the exact `ollama pull svjack/gpt-oss-20b-heretic:latest` command and still starts the
+  UI. `--pull` is the explicit opt-in for the ~15.8 GB base; `--pull-vision` adds
+  `gemma3:4b` (3.3 GB).
+- The launcher creates `spicy-heretic:latest` from the base with the same parameters
+  GCP bakes: `temperature=0.7`, `top_p=0.9`, `repeat_penalty=1.18`, `num_predict=4096`.
+  Do not let the local and GCP model names or parameters diverge.
+- Logs: `/tmp/spicy_llm/<branch-slug>/`. Open WebUI data: the branch-scoped dir above.
+- Verify with the real integration test before deploying:
+
+```bash
+SPICY_OPENWEBUI_URL=http://127.0.0.1:<port> SPICY_BACKEND_URL=http://127.0.0.1:11434 \
+  pytest tests/integration/test_openwebui_heretic_only_browser.py
+```
+
+- **Local green is not production proof.** Local runs on Apple MPS; GCP runs on an L4
+  with a Q4_K_M GGUF. Do not generalize a local result to Cloud Run (or vice versa)
+  without a live check.
+- Deploy only after local passes: build and deploy per `gcp/README.md`, using
+  `--no-traffic --tag=<name>` for a canary when in doubt.
+
 ## Work style
 
 - Use `.claude/commands/spicy-llm.md` or the `spicy-llm` skill when testing the
