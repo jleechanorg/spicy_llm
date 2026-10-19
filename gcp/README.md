@@ -1,5 +1,10 @@
 # spicy_llm — GCP Cloud Run setup
 
+> **Deleted 2026-10-19.** The Ollama backend described in this file
+> (`spicy-llm-backend`) was removed. `spicy-search` and the Open WebUI chat UI now
+> use **Abliteration.ai** (`https://api.abliteration.ai/v1`). This document is
+> retained as historical documentation of the L4 Ollama harness.
+
 L4 Ollama harness for spicy_llm refusal and decensoring research.
 
 **Current target (local parity):**

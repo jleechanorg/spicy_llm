@@ -60,6 +60,12 @@ future reproducible harness second.
 
 ## Local iteration before deploy
 
+> **Ollama removed 2026-10-19.** The local Ollama install, the GCP
+> `spicy-llm-backend`, and the local Open WebUI stack were deleted. The live
+> ChatGPT-style UI is Open WebUI backed by Abliteration.ai
+> (`gcp/openwebui/`). The section below is historical for the removed Ollama
+> launcher; do not expect it to run without a local Ollama.
+
 Verify locally first, then deploy to GCP. `scripts/run_local_server.sh` is the fast
 loop; a Cloud Run build/deploy is the evidence step, not the debugging step.
 

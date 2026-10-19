@@ -1,7 +1,8 @@
-# Open WebUI on Cloud Run + Cloud SQL
+# Open WebUI on Cloud Run + Cloud SQL (Abliteration.ai backend)
 
 This deploys Open WebUI to the AI Universe GCP project with durable chat/config
-state stored in Cloud SQL for PostgreSQL.
+state stored in Cloud SQL for PostgreSQL. The model backend is
+**Abliteration.ai** over its OpenAI-compatible API. There is no Ollama server.
 
 ## Resources
 
@@ -15,11 +16,12 @@ state stored in Cloud SQL for PostgreSQL.
 - Artifact Registry repo: `spicy-openwebui`
 - Cloud Run image: `us-central1-docker.pkg.dev/ai-universe-2025/spicy-openwebui/open-webui:main`
 - URL: `https://spicy-openwebui-elhm2qjlta-uc.a.run.app`
-- Ollama backend: `https://spicy-llm-backend-elhm2qjlta-uc.a.run.app`
-- Default chat/task model: `spicy-heretic:latest`
+- Model backend: `https://api.abliteration.ai/v1` (OpenAI-compatible)
+- Default chat/task model: `abliterated-model-large-v2`
 - Secrets:
   - `spicy-openwebui-database-url`
   - `spicy-openwebui-secret-key`
+  - `spicy-search-abliteration-key` (also used by `spicy-search`)
 
 ## Deploy
 
@@ -41,45 +43,63 @@ DATABASE_URL=postgresql://openwebui:<password>@/openwebui?host=/cloudsql/ai-univ
 
 The full URL is stored only in Secret Manager.
 
+## Abliteration connection
+
+The script configures Open WebUI's OpenAI-compatible provider:
+
+```text
+OPENAI_API_BASE_URL=https://api.abliteration.ai/v1
+OPENAI_API_BASE_URLS=https://api.abliteration.ai/v1
+ENABLE_OPENAI_API=true
+OPENAI_API_KEY=<secret: spicy-search-abliteration-key>
+DEFAULT_MODELS=abliterated-model-large-v2
+TASK_MODEL=abliterated-model-large-v2
+DEFAULT_MODEL_PARAMS={"reasoning_effort":"low"}
+```
+
+`reasoning_effort=low` matters: the Abliteration models are reasoning models.
+At the default effort they can spend the entire completion budget on hidden
+reasoning and return empty content. Verified 2026-10-18 on the live API: with
+`reasoning_effort=low` all three models returned valid JSON/content in ~1 s with
+0–485 reasoning tokens.
+
+The runtime service account is granted `roles/secretmanager.secretAccessor` on
+the Abliteration key secret. No Ollama endpoint, model alias, or `OLLAMA_*`
+variable is configured.
+
 ## Notes
 
 - Open WebUI supports PostgreSQL through `DATABASE_URL`; this is the supported
   durable database path for Cloud Run.
 - `ENABLE_SIGNUP=True` is intentional for first boot so the first browser user
   can create the initial admin account. Disable signup from the admin UI after
-  the admin account exists.
-- `OLLAMA_BASE_URL` is optional. Set it before running the script if a reachable
-  Ollama endpoint exists. The current spicy_llm backend is:
+  the admin account exists; the live instance currently reports
+  `enable_signup=false`.
+- `WEBUI_AUTH=True` is kept: the UI requires a login, and the 18+ age gate lives
+  in the `spicy-search` app, not here.
+- `BYPASS_MODEL_ACCESS_CONTROL=True` exposes the connected OpenAI models
+  directly instead of maintaining per-model grants in the Open WebUI database.
+- `ENABLE_EVALUATION_ARENA_MODELS=False` so Open WebUI does not add its built-in
+  `Arena Model` pseudo-option to the model picker.
+- `DEFAULT_MODEL_PARAMS` is `{"reasoning_effort":"low"}`; it is not the old
+  Ollama-only `{"think":"low"}`.
+- Any `ollama.api_configs` rows left in the Cloud SQL config are legacy and have
+  no effect now that no Ollama connection exists.
 
-```bash
-OLLAMA_BASE_URL="https://spicy-llm-backend-elhm2qjlta-uc.a.run.app" gcp/openwebui/deploy.sh
-```
+## Historical: the Ollama backend
 
-The deploy script sets `DEFAULT_MODELS` and `TASK_MODEL` to
-`spicy-heretic:latest` by default. The backend creates that Ollama alias with
-lower-temperature, repeat-penalty, and large `num_predict` parameters for long
-creative/RAG chats.
-
-It also sets `BYPASS_MODEL_ACCESS_CONTROL=True`. Open WebUI v0.9 filters base
-Ollama models for normal users unless matching model/access-grant rows exist in
-its database; this solo research deployment exposes the connected Ollama models
-directly instead of maintaining per-model grants.
-
-`ENABLE_EVALUATION_ARENA_MODELS` defaults to `False` so Open WebUI does not add
-its built-in `Arena Model` pseudo-option to the model picker.
-
-`DEFAULT_MODEL_PARAMS` defaults to `{"think":"low"}`. GPT-OSS models emit
-reasoning traces by default; low thinking keeps OpenWebUI chats from spending the
-whole token budget on hidden reasoning before visible content.
-
-The live Cloud SQL config filters the connected Ollama server to
-`spicy-heretic:latest` only via `ollama.api_configs[0].model_ids`. The backend
-may still keep the base Heretic model internally because the tuned alias is
-created from it, but Open WebUI should only show the tuned alias.
+The previous deployment used `spicy-llm-backend-elhm2qjlta-uc.a.run.app`
+(Ollama + `spicy-heretic:latest`, later `gemma3:4b` for vision). That service
+was **deleted on 2026-10-19**; the local Ollama install and model blobs were
+removed as well. `gcp/README.md` is retained as historical documentation of that
+harness.
 
 ## Browser Integration Proof
 
-Run the live browser proof from the repository root:
+`tests/integration/test_openwebui_heretic_only_browser.py` was written for the
+old `spicy-heretic:latest` Ollama deployment and asserts that model id. It is
+**stale** for the Abliteration-backed UI; update `EXPECTED_MODEL` before using
+it, or run the proof against `abliterated-model-large-v2`.
 
 ```bash
 python3 -m pip install pytest playwright
@@ -89,17 +109,3 @@ SPICY_OPENWEBUI_EMAIL="<test-user-email>" \
 SPICY_OPENWEBUI_PASSWORD="<test-user-password>" \
 python3 tests/integration/test_openwebui_heretic_only_browser.py
 ```
-
-The test opens the deployed Open WebUI in Playwright, asserts that `/api/models`
-and the model picker expose only `spicy-heretic:latest`, and writes browser
-evidence under `results/openwebui-heretic-only-browser/<timestamp>/`:
-
-- `videos/*.webm` from Playwright
-- `videos/openwebui_heretic_only.vtt` caption track
-- `videos/openwebui_heretic_only_captioned.mp4` when `ffmpeg` is installed
-- screenshots and `manifest.json`
-
-Instead of email/password env vars, you can set
-`SPICY_OPENWEBUI_STORAGE_STATE=/absolute/path/to/storage_state.json` to reuse a
-Playwright-authenticated browser state. The test records whether auth was
-required, but it does not write passwords into artifacts.

@@ -13,11 +13,15 @@ DATABASE_URL_SECRET="${DATABASE_URL_SECRET:-spicy-openwebui-database-url}"
 WEBUI_SECRET_KEY_SECRET="${WEBUI_SECRET_KEY_SECRET:-spicy-openwebui-secret-key}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-spicy-openwebui}"
 IMAGE="${IMAGE:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/open-webui:main}"
-OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-}"
-DEFAULT_MODELS="${DEFAULT_MODELS:-spicy-heretic:latest}"
-TASK_MODEL="${TASK_MODEL:-spicy-heretic:latest}"
+ABLITERATION_BASE_URL="${ABLITERATION_BASE_URL:-https://api.abliteration.ai/v1}"
+ABLITERATION_MODEL="${ABLITERATION_MODEL:-abliterated-model-large-v2}"
+ABLITERATION_API_KEY_SECRET="${ABLITERATION_API_KEY_SECRET:-spicy-search-abliteration-key}"
+DEFAULT_MODELS="${DEFAULT_MODELS:-$ABLITERATION_MODEL}"
+TASK_MODEL="${TASK_MODEL:-$ABLITERATION_MODEL}"
 BYPASS_MODEL_ACCESS_CONTROL="${BYPASS_MODEL_ACCESS_CONTROL:-True}"
-DEFAULT_MODEL_PARAMS="${DEFAULT_MODEL_PARAMS:-{\"think\":\"low\"}}"
+# Abliteration is a reasoning model: without reasoning_effort=low it spends the
+# whole completion budget on hidden reasoning and returns empty content.
+DEFAULT_MODEL_PARAMS="${DEFAULT_MODEL_PARAMS:-{\"reasoning_effort\":\"low\"}}"
 ENABLE_EVALUATION_ARENA_MODELS="${ENABLE_EVALUATION_ARENA_MODELS:-False}"
 
 gcloud_base=(gcloud --project="$PROJECT_ID" --account="$ACCOUNT")
@@ -137,17 +141,16 @@ done
   --role=roles/cloudsql.client \
   --quiet >/dev/null
 
-for secret in "$DATABASE_URL_SECRET" "$WEBUI_SECRET_KEY_SECRET"; do
+for secret in "$DATABASE_URL_SECRET" "$WEBUI_SECRET_KEY_SECRET" "$ABLITERATION_API_KEY_SECRET"; do
   "${gcloud_base[@]}" secrets add-iam-policy-binding "$secret" \
     --member="serviceAccount:${runtime_sa}" \
     --role=roles/secretmanager.secretAccessor \
     --quiet >/dev/null
 done
 
-env_vars="ENV=prod,WEBUI_AUTH=True,ENABLE_SIGNUP=True,DEFAULT_MODELS=${DEFAULT_MODELS},TASK_MODEL=${TASK_MODEL},BYPASS_MODEL_ACCESS_CONTROL=${BYPASS_MODEL_ACCESS_CONTROL},DEFAULT_MODEL_PARAMS=${DEFAULT_MODEL_PARAMS},ENABLE_EVALUATION_ARENA_MODELS=${ENABLE_EVALUATION_ARENA_MODELS}"
-if [ -n "$OLLAMA_BASE_URL" ]; then
-  env_vars="${env_vars},OLLAMA_BASE_URL=${OLLAMA_BASE_URL}"
-fi
+# Open WebUI reaches Abliteration through its OpenAI-compatible connection.
+# There is no Ollama backend anymore; this is the only inference path.
+env_vars="ENV=prod,WEBUI_AUTH=True,ENABLE_SIGNUP=True,DEFAULT_MODELS=${DEFAULT_MODELS},TASK_MODEL=${TASK_MODEL},BYPASS_MODEL_ACCESS_CONTROL=${BYPASS_MODEL_ACCESS_CONTROL},DEFAULT_MODEL_PARAMS=${DEFAULT_MODEL_PARAMS},ENABLE_EVALUATION_ARENA_MODELS=${ENABLE_EVALUATION_ARENA_MODELS},OPENAI_API_BASE_URL=${ABLITERATION_BASE_URL},OPENAI_API_BASE_URLS=${ABLITERATION_BASE_URL},ENABLE_OPENAI_API=true"
 
 "${gcloud_base[@]}" run deploy "$SERVICE" \
   --image="$IMAGE" \
@@ -162,7 +165,7 @@ fi
   --timeout=900 \
   --service-account="$runtime_sa" \
   --add-cloudsql-instances="$connection_name" \
-  --set-secrets="DATABASE_URL=${DATABASE_URL_SECRET}:latest,WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY_SECRET}:latest" \
+  --set-secrets="DATABASE_URL=${DATABASE_URL_SECRET}:latest,WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY_SECRET}:latest,OPENAI_API_KEY=${ABLITERATION_API_KEY_SECRET}:latest" \
   --set-env-vars="$env_vars" \
   --allow-unauthenticated
 

@@ -1,5 +1,10 @@
 # spicy_llm
 
+> **Status 2026-10-19:** the GCP Ollama backend (`spicy-llm-backend`) and the
+> local Ollama/Open WebUI stack were removed. The live ChatGPT-style UI is Open
+> WebUI backed by **Abliteration.ai** — see [`gcp/openwebui/README.md`](gcp/openwebui/README.md).
+> The Heretic/Ollama research history below is retained as historical evidence.
+
 Local abliteration research — testing **[Heretic](https://github.com/p-e-w/heretic)** + [Ollama](https://ollama.com) pipelines for "decensoring" (removing safety alignment from) LLMs on Apple Silicon.
 
 > **What this is now:** an evidence repo with a partial local/GCP harness. It has
