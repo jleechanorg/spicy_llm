@@ -58,13 +58,22 @@ future reproducible harness second.
 - In chat/review output, avoid quoting operational harmful details; cite the
   file and summarize the evidence at a high level.
 
-## Guardrail changes
+## Content guardrail policy (mirrored from spicy-search/AGENTS.md, 2026-10-19)
 
-- Do not add new access controls, gates, policies, or guardrails unless the user
-explicitly approves that specific guardrail.
-- Approved exception: the age-verified gate for the Spicy catalogue tool
-  (Open WebUI `age-verified` group + tool access), requested 2026-10-19.
-- Do not expand that gate to unrelated tools or users without approval.
+- **NEVER add a content guardrail automatically.** No new check, block, filter, denylist,
+  allowlist of blocked words, prompt-level refusal, validation layer, special-case branch, or
+  safety gate may be written, generated, refactored in, or "helpfully" suggested-as-code
+  without the operator saying **`GUARDRAIL APPROVED`** in the live conversation. That phrase
+  is the only authorization. Absent it, do not add one — including as part of an unrelated
+  change, a review fix, or a "small improvement".
+- The only content guardrail is spicy-search's data file:
+  `config/guardrail-words.json`, compiled by `lib/safety/guardrail-words.ts`. It filters
+  explicit ages 1–17 and child/underage vocabulary. Ordinary adult-genre vocabulary
+  (`teen`, `young`, `milf`, `mature`, etc.) is **not** blocked. Do not create a second list.
+- Appearance, youthfulness, and attractiveness are ordinary ranking signals; nothing in this
+  repo may filter, mask, or refuse them.
+- Approved access gate (not a content filter): the Open WebUI `age-verified` group for the
+  Spicy catalogue tool, requested 2026-10-19. Do not expand it without approval.
 
 ## Local iteration before deploy
 
