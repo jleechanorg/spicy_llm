@@ -93,6 +93,7 @@ Open WebUI is configured with Google OAuth in addition to email/password:
 ```text
 ENABLE_OAUTH=true
 ENABLE_OAUTH_SIGNUP=true
+OAUTH_MERGE_ACCOUNTS_BY_EMAIL=true
 GOOGLE_CLIENT_ID=754683067800-kd1k17ivqpvdl6s40f4m6tf0arp1s6au.apps.googleusercontent.com
 GOOGLE_REDIRECT_URI=https://spicy-openwebui-elhm2qjlta-uc.a.run.app/oauth/google/callback
 GOOGLE_CLIENT_SECRET=<secret: spicy-openwebui-google-oauth>
@@ -103,6 +104,9 @@ GOOGLE_CLIENT_SECRET=<secret: spicy-openwebui-google-oauth>
   **External / In production**). The client ID/secret is cross-project; the
   service itself stays in `ai-universe-2025`.
 - Authorized redirect URI: `https://spicy-openwebui-elhm2qjlta-uc.a.run.app/oauth/google/callback`.
+- **Account linking:** `OAUTH_MERGE_ACCOUNTS_BY_EMAIL=true` so a Google login whose
+  email already exists as an email/password user links to that account instead of
+  failing with “This email is already registered” (the 2026-10-19 00:15 repro).
 - Secret: `spicy-openwebui-google-oauth` in `ai-universe-2025` Secret Manager; the
   runtime SA is granted `secretmanager.secretAccessor`.
 - Verified: the login page renders **Continue with Google** and the click redirects
