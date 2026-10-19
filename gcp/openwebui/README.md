@@ -71,10 +71,10 @@ variable is configured.
 
 - Open WebUI supports PostgreSQL through `DATABASE_URL`; this is the supported
   durable database path for Cloud Run.
-- `ENABLE_SIGNUP=True` is intentional for first boot so the first browser user
-  can create the initial admin account. Disable signup from the admin UI after
-  the admin account exists; the live instance currently reports
-  `enable_signup=false`.
+- Email/password signup is OFF by default (`ENABLE_SIGNUP=False`), matching the
+  live instance (`enable_signup=false`) and the persisted DB config. For a
+  first-boot bootstrap, run `ENABLE_SIGNUP=True gcp/openwebui/deploy.sh`, then
+  turn it off again.
 - `WEBUI_AUTH=True` is kept: the UI requires a login, and the 18+ age gate lives
   in the `spicy-search` app, not here.
 - `BYPASS_MODEL_ACCESS_CONTROL=True` exposes the connected OpenAI models
