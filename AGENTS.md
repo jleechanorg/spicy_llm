@@ -58,6 +58,14 @@ future reproducible harness second.
 - In chat/review output, avoid quoting operational harmful details; cite the
   file and summarize the evidence at a high level.
 
+## Guardrail changes
+
+- Do not add new access controls, gates, policies, or guardrails unless the user
+explicitly approves that specific guardrail.
+- Approved exception: the age-verified gate for the Spicy catalogue tool
+  (Open WebUI `age-verified` group + tool access), requested 2026-10-19.
+- Do not expand that gate to unrelated tools or users without approval.
+
 ## Local iteration before deploy
 
 > **Ollama removed 2026-10-19.** The local Ollama install, the GCP
