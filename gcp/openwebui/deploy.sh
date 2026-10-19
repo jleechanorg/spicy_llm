@@ -30,7 +30,7 @@ TASK_MODEL="${TASK_MODEL:-$ABLITERATION_MODEL}"
 BYPASS_MODEL_ACCESS_CONTROL="${BYPASS_MODEL_ACCESS_CONTROL:-True}"
 # Abliteration is a reasoning model: without reasoning_effort=low it spends the
 # whole completion budget on hidden reasoning and returns empty content.
-DEFAULT_MODEL_PARAMS="${DEFAULT_MODEL_PARAMS:-{\"reasoning_effort\":\"low\"}}"
+DEFAULT_MODEL_PARAMS="${DEFAULT_MODEL_PARAMS:-$(printf '%s' '{"reasoning_effort":"low"}')}"
 ENABLE_EVALUATION_ARENA_MODELS="${ENABLE_EVALUATION_ARENA_MODELS:-False}"
 
 gcloud_base=(gcloud --project="$PROJECT_ID" --account="$ACCOUNT")
