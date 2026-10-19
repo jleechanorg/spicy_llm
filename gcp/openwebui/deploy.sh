@@ -16,6 +16,15 @@ IMAGE="${IMAGE:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/open-web
 ABLITERATION_BASE_URL="${ABLITERATION_BASE_URL:-https://api.abliteration.ai/v1}"
 ABLITERATION_MODEL="${ABLITERATION_MODEL:-abliterated-model-large-v2}"
 ABLITERATION_API_KEY_SECRET="${ABLITERATION_API_KEY_SECRET:-spicy-search-abliteration-key}"
+# Google SSO. The OAuth client lives in the worldarchitecture-ai project
+# (its consent screen is already configured: External / In production), but a
+# client ID/secret works from any project. Callback is Open WebUI's
+# /oauth/google/callback.
+GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-754683067800-kd1k17ivqpvdl6s40f4m6tf0arp1s6au.apps.googleusercontent.com}"
+GOOGLE_OAUTH_SECRET="${GOOGLE_OAUTH_SECRET:-spicy-openwebui-google-oauth}"
+GOOGLE_REDIRECT_URI="${GOOGLE_REDIRECT_URI:-https://spicy-openwebui-elhm2qjlta-uc.a.run.app/oauth/google/callback}"
+ENABLE_OAUTH="${ENABLE_OAUTH:-True}"
+ENABLE_OAUTH_SIGNUP="${ENABLE_OAUTH_SIGNUP:-True}"
 DEFAULT_MODELS="${DEFAULT_MODELS:-$ABLITERATION_MODEL}"
 TASK_MODEL="${TASK_MODEL:-$ABLITERATION_MODEL}"
 BYPASS_MODEL_ACCESS_CONTROL="${BYPASS_MODEL_ACCESS_CONTROL:-True}"
@@ -141,7 +150,7 @@ done
   --role=roles/cloudsql.client \
   --quiet >/dev/null
 
-for secret in "$DATABASE_URL_SECRET" "$WEBUI_SECRET_KEY_SECRET" "$ABLITERATION_API_KEY_SECRET"; do
+for secret in "$DATABASE_URL_SECRET" "$WEBUI_SECRET_KEY_SECRET" "$ABLITERATION_API_KEY_SECRET" "$GOOGLE_OAUTH_SECRET"; do
   "${gcloud_base[@]}" secrets add-iam-policy-binding "$secret" \
     --member="serviceAccount:${runtime_sa}" \
     --role=roles/secretmanager.secretAccessor \
@@ -150,7 +159,7 @@ done
 
 # Open WebUI reaches Abliteration through its OpenAI-compatible connection.
 # There is no Ollama backend anymore; this is the only inference path.
-env_vars="ENV=prod,WEBUI_AUTH=True,ENABLE_SIGNUP=True,DEFAULT_MODELS=${DEFAULT_MODELS},TASK_MODEL=${TASK_MODEL},BYPASS_MODEL_ACCESS_CONTROL=${BYPASS_MODEL_ACCESS_CONTROL},DEFAULT_MODEL_PARAMS=${DEFAULT_MODEL_PARAMS},ENABLE_EVALUATION_ARENA_MODELS=${ENABLE_EVALUATION_ARENA_MODELS},OPENAI_API_BASE_URL=${ABLITERATION_BASE_URL},OPENAI_API_BASE_URLS=${ABLITERATION_BASE_URL},ENABLE_OPENAI_API=true"
+env_vars="ENV=prod,WEBUI_AUTH=True,ENABLE_SIGNUP=True,DEFAULT_MODELS=${DEFAULT_MODELS},TASK_MODEL=${TASK_MODEL},BYPASS_MODEL_ACCESS_CONTROL=${BYPASS_MODEL_ACCESS_CONTROL},DEFAULT_MODEL_PARAMS=${DEFAULT_MODEL_PARAMS},ENABLE_EVALUATION_ARENA_MODELS=${ENABLE_EVALUATION_ARENA_MODELS},OPENAI_API_BASE_URL=${ABLITERATION_BASE_URL},OPENAI_API_BASE_URLS=${ABLITERATION_BASE_URL},ENABLE_OPENAI_API=true,ENABLE_OAUTH=${ENABLE_OAUTH},ENABLE_OAUTH_SIGNUP=${ENABLE_OAUTH_SIGNUP},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}"
 
 "${gcloud_base[@]}" run deploy "$SERVICE" \
   --image="$IMAGE" \
@@ -165,7 +174,7 @@ env_vars="ENV=prod,WEBUI_AUTH=True,ENABLE_SIGNUP=True,DEFAULT_MODELS=${DEFAULT_M
   --timeout=900 \
   --service-account="$runtime_sa" \
   --add-cloudsql-instances="$connection_name" \
-  --set-secrets="DATABASE_URL=${DATABASE_URL_SECRET}:latest,WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY_SECRET}:latest,OPENAI_API_KEY=${ABLITERATION_API_KEY_SECRET}:latest" \
+  --set-secrets="DATABASE_URL=${DATABASE_URL_SECRET}:latest,WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY_SECRET}:latest,OPENAI_API_KEY=${ABLITERATION_API_KEY_SECRET}:latest,GOOGLE_CLIENT_SECRET=${GOOGLE_OAUTH_SECRET}:latest" \
   --set-env-vars="$env_vars" \
   --allow-unauthenticated
 

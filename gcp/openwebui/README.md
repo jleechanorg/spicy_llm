@@ -86,6 +86,33 @@ variable is configured.
 - Any `ollama.api_configs` rows left in the Cloud SQL config are legacy and have
   no effect now that no Ollama connection exists.
 
+## Google SSO
+
+Open WebUI is configured with Google OAuth in addition to email/password:
+
+```text
+ENABLE_OAUTH=true
+ENABLE_OAUTH_SIGNUP=true
+GOOGLE_CLIENT_ID=754683067800-kd1k17ivqpvdl6s40f4m6tf0arp1s6au.apps.googleusercontent.com
+GOOGLE_REDIRECT_URI=https://spicy-openwebui-elhm2qjlta-uc.a.run.app/oauth/google/callback
+GOOGLE_CLIENT_SECRET=<secret: spicy-openwebui-google-oauth>
+```
+
+- OAuth client: **“Open WebUI (spicy-search) 2”**, a Web application client in the
+  `worldarchitecture-ai` project (its consent screen already exists and is
+  **External / In production**). The client ID/secret is cross-project; the
+  service itself stays in `ai-universe-2025`.
+- Authorized redirect URI: `https://spicy-openwebui-elhm2qjlta-uc.a.run.app/oauth/google/callback`.
+- Secret: `spicy-openwebui-google-oauth` in `ai-universe-2025` Secret Manager; the
+  runtime SA is granted `secretmanager.secretAccessor`.
+- Verified: the login page renders **Continue with Google** and the click redirects
+  to Google with the correct `client_id`, `redirect_uri`, and
+  `scope=openid email profile`. Completing the sign-in needs the target Google
+  account’s password/passkey; the Open WebUI password is not the Google password.
+- Consent-screen branding is **WorldArchitect.AI** because the client lives in that
+  project. A separate brand requires a consent screen in `ai-universe-2025` and
+  Google verification for an external adult-content app.
+
 ## Historical: the Ollama backend
 
 The previous deployment used `spicy-llm-backend-elhm2qjlta-uc.a.run.app`
