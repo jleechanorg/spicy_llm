@@ -140,3 +140,54 @@ SPICY_OPENWEBUI_EMAIL="<test-user-email>" \
 SPICY_OPENWEBUI_PASSWORD="<test-user-password>" \
 python3 tests/integration/test_openwebui_heretic_only_browser.py
 ```
+
+## Catalogue tool + AI search paths (2026-10-19)
+
+Live Open WebUI `0.12.3` (`spicy-openwebui-00027-lfh`) has two independent search paths:
+
+1. **General web search** — the custom `Abliterated Web Search` model sends
+   `web_search_options: {}` to Abliteration. The provider performs live web search and
+   returns an answer plus citations; no tool call is involved. Verified live: Node.js
+   `24.22.0` with 4 cited sources.
+2. **Catalogue search** — the native `spicy_search` tool calls spicy-search
+   `GET /api/search` with the signed `age_ok` cookie and returns the full result rows
+   (title, tags, `source_url`, summary, `link_status`, etc.). The model formats the
+   titles and clickable links.
+
+### Gateway 403 constraint
+
+The Abliteration gateway returns **HTTP 403** for bare title + URL tool results,
+including the minimal `{sceneId, title, url, snippet}` shape. Returning the full
+catalogue rows — especially `tags` — is accepted (HTTP 200). The live tool source is
+`gcp/openwebui/tools/spicy_search_full_metadata.py`.
+
+The internal `/api/internal/search` route is **not used and not deployed**; its minimal
+shape reproduces the 403. Do not wire it as a tool result without adding tags/full
+metadata.
+
+### Age-verified gate
+
+The `spicy_search` tool is shared only with the Open WebUI `age-verified` group
+(group id `7941c757-f6e2-455b-9d98-4dcac14959f1`; owner `jleechan@gmail.com`; one member).
+The test account's duplicate `spicy_search_lt` tool was deleted, so its tool list has no
+catalogue-search tool. Add vetted 18+ users via **Admin → Groups**; do not share the tool
+publicly.
+
+The shared `SPICY_SEARCH_AGE_COOKIE` remains a service env secret; Open WebUI group
+access control is the user-facing gate. This is an admin-managed allowlist, not an
+independent age-verification provider.
+
+### Verified legal-scene search (2026-10-19)
+
+Using the live admin chat (`Abliterated Large v2` + `spicy_search`, query
+`redhead milf amateur`, excluding teen/school/young/step/family/incest/non-consent
+markers), three MILF/amateur scenes were returned with `link_status: live`; all three
+URLs independently returned **HTTP 200**:
+
+- `https://www.pornhub.com/view_video.php?viewkey=65639787c4b4e`
+- `https://www.pornhub.com/view_video.php?viewkey=ph5c62ce96a5d10`
+- `https://www.pornhub.com/view_video.php?viewkey=67d35fc436c80`
+
+The catalogue does not expose performer-age/2257 metadata; the selection is based on
+titles/tags and the mainstream source, and platform-level compliance was not
+independently audited.

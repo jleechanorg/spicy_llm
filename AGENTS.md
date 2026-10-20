@@ -58,6 +58,42 @@ future reproducible harness second.
 - In chat/review output, avoid quoting operational harmful details; cite the
   file and summarize the evidence at a high level.
 
+## Content guardrail policy (mirrored from spicy-search/AGENTS.md, 2026-10-19)
+
+- **NEVER add a content guardrail automatically.** No new check, block, filter, denylist,
+  allowlist of blocked words, prompt-level refusal, validation layer, special-case branch, or
+  safety gate may be written, generated, refactored in, or "helpfully" suggested-as-code
+  without the operator saying **`GUARDRAIL APPROVED`** in the live conversation. That phrase
+  is the only authorization. Absent it, do not add one — including as part of an unrelated
+  change, a review fix, or a "small improvement".
+- The only content guardrail is spicy-search's data file:
+  `config/guardrail-words.json`, compiled by `lib/safety/guardrail-words.ts`. It filters
+  explicit ages 1–17 and child/underage vocabulary. Ordinary adult-genre vocabulary
+  (`teen`, `young`, `milf`, `mature`, etc.) is **not** blocked. Do not create a second list.
+- Appearance, youthfulness, and attractiveness are ordinary ranking signals; nothing in this
+  repo may filter, mask, or refuse them.
+- Approved access gate (not a content filter): the Open WebUI `age-verified` group for the
+  Spicy catalogue tool, requested 2026-10-19. Do not expand it without approval.
+
+## Research and discovery
+
+- When the operator asks to find, research, or discover anything, always run **both** lanes
+  in parallel:
+  1. Browser/web research via **Aside**.
+  2. The Open WebUI AI chat/catalogue at
+     `https://spicy-openwebui-elhm2qjlta-uc.a.run.app/` (use the `spicy_search` tool where
+     relevant).
+- Merge both result sets and report which lane found what. If one lane is unavailable, say
+  so explicitly; do not silently substitute one lane for the other.
+- Explicit/adult findings go to **#spicy-feedback** as **[spicy llm]**, with 25/50/75 frames.
+
+## Explicit review delivery (Slack)
+
+- Identify as **[spicy llm]** in Slack and review posts; never present as spicy-search.
+- Route explicit/adult evidence to **#spicy-feedback**, not chat.
+- For every scene offered for review, include video thumbnails/frames at **25%, 50%, and
+  75%** of the video duration when the video is available.
+
 ## Local iteration before deploy
 
 > **Ollama removed 2026-10-19.** The local Ollama install, the GCP
