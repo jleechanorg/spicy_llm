@@ -75,6 +75,13 @@ future reproducible harness second.
 - Approved access gate (not a content filter): the Open WebUI `age-verified` group for the
   Spicy catalogue tool, requested 2026-10-19. Do not expand it without approval.
 
+## Explicit review delivery (Slack)
+
+- Identify as **[spicy llm]** in Slack and review posts; never present as spicy-search.
+- Route explicit/adult evidence to **#spicy-feedback**, not chat.
+- For every scene offered for review, include video thumbnails/frames at **25%, 50%, and
+  75%** of the video duration when the video is available.
+
 ## Local iteration before deploy
 
 > **Ollama removed 2026-10-19.** The local Ollama install, the GCP
