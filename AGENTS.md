@@ -75,6 +75,18 @@ future reproducible harness second.
 - Approved access gate (not a content filter): the Open WebUI `age-verified` group for the
   Spicy catalogue tool, requested 2026-10-19. Do not expand it without approval.
 
+## Research and discovery
+
+- When the operator asks to find, research, or discover anything, always run **both** lanes
+  in parallel:
+  1. Browser/web research via **Aside**.
+  2. The Open WebUI AI chat/catalogue at
+     `https://spicy-openwebui-elhm2qjlta-uc.a.run.app/` (use the `spicy_search` tool where
+     relevant).
+- Merge both result sets and report which lane found what. If one lane is unavailable, say
+  so explicitly; do not silently substitute one lane for the other.
+- Explicit/adult findings go to **#spicy-feedback** as **[spicy llm]**, with 25/50/75 frames.
+
 ## Explicit review delivery (Slack)
 
 - Identify as **[spicy llm]** in Slack and review posts; never present as spicy-search.
