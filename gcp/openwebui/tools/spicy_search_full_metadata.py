@@ -16,12 +16,18 @@ class Tools:
         """Search the spicy-search catalogue for scenes matching a query."""
         base = (os.environ.get("SPICY_SEARCH_BASE_URL") or "http://localhost:3000").rstrip("/")
         cookie = os.environ.get("SPICY_SEARCH_AGE_COOKIE") or ""
+        session = os.environ.get("SPICY_SEARCH_SESSION_COOKIE") or ""
         token = os.environ.get("SPICY_SEARCH_API_TOKEN") or ""
         n = max(1, min(int(max_results), 10))
         params = urllib.parse.urlencode({"q": query, "per_page": n})
         headers = {"accept": "application/json"}
+        cookies = []
         if cookie:
-            headers["cookie"] = f"age_ok={cookie}"
+            cookies.append(f"age_ok={cookie}")
+        if session:
+            cookies.append(f"spicy_session={session}")
+        if cookies:
+            headers["cookie"] = "; ".join(cookies)
         if token:
             headers["authorization"] = f"Bearer {token}"
         request = urllib.request.Request(f"{base}/api/search?{params}", headers=headers, method="GET")

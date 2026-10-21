@@ -173,7 +173,13 @@ The test account's duplicate `spicy_search_lt` tool was deleted, so its tool lis
 catalogue-search tool. Add vetted 18+ users via **Admin → Groups**; do not share the tool
 publicly.
 
-The shared `SPICY_SEARCH_AGE_COOKIE` remains a service env secret; Open WebUI group
+The shared `SPICY_SEARCH_AGE_COOKIE` remains a service env secret. Set
+`SPICY_SEARCH_SESSION_COOKIE` to the operator's `spicy_session` cookie as well;
+when present, `/api/search` applies the operator's effective boost/hide lists
+(`boostTags` = white/slim/petite/thin/athletic; `hiddenTags` = bbw/fat/chubby/
+ssbbw/thick/plump/ebony/black/indian/desi/old/milf/mature/granny/cougar/40-plus/
+asian). Without the session cookie the tool sends only `age_ok` and the operator
+preferences are not applied. Open WebUI group
 access control is the user-facing gate. This is an admin-managed allowlist, not an
 independent age-verification provider.
 
