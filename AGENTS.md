@@ -91,8 +91,9 @@ future reproducible harness second.
 
 - Identify as **[spicy llm]** in Slack and review posts; never present as spicy-search.
 - Route explicit/adult evidence to **#spicy-feedback**, not chat.
-- For every scene offered for review, include video thumbnails/frames at **25%, 50%, and
-  75%** of the video duration when the video is available.
+- For every scene offered for review, include the video thumbnail, a short video clip,
+  and frames at **25%, 50%, and 75%** of the video duration when the video is available.
+  If a clip cannot be produced, send the 25/50/75 frames instead; never post only URLs.
 
 ## Local iteration before deploy
 
