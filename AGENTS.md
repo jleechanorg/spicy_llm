@@ -1,5 +1,7 @@
 # spicy_llm Agent Instructions
 
+Keep this file <= 200 lines; move detail to linked docs.
+
 This repository is local research for abliteration, decensoring, and refusal-rate
 benchmarking of open-weight LLMs. Treat it as an evidence repo first and a
 future reproducible harness second.
